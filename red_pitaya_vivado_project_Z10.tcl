@@ -20,8 +20,7 @@ set path_brd ../../brd
 set path_rtl rtl
 set path_ip      ip
 set path_ip_top  ../../ip
-set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
-#set path_bd  project/redpitaya.srcs/sources_1/bd/system
+set path_bd  project/redpitaya.gen/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_sdc_prj sdc
 

@@ -14,7 +14,7 @@ module axi4_stream_cnt #(
   output logic [CW-1:0] sts_cur,  // current     counter status
   output logic [CW-1:0] sts_lst,  // last packet counter status
   // stream monitor
-  axi4_stream_if.m      str
+  axi4_stream_if.s      str
 );
 
 // increment width
