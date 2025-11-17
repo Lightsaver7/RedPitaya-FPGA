@@ -91,11 +91,11 @@ read_ip                         $ip_files
 }
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-read_ip $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+source ${path_ip_top}/asg_dat_fifo/asg_dat_fifo.tcl
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-read_ip $path_ip_top/sync_fifo/sync_fifo.xci
+source ${path_ip_top}/asg_dat_fifo/sync_fifo.xci
 }
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
