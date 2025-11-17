@@ -125,7 +125,7 @@ begin
   if (adc_rstn_i == 1'b0)
     offset_calc <= 'h0;
   else
-    offset_calc <= $signed(adc_data) + $signed(offset);
+    offset_calc <= $signed(adc_data) - $signed(offset);
     offset_calc_r <= offset_calc;
 end
 

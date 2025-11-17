@@ -101,7 +101,7 @@ begin
   if (rst_n == 1'b0)
     offset_calc <= 'h0;
   else
-    offset_calc <= $signed(adc_data) + $signed(offset);  
+    offset_calc <= $signed(adc_data) - $signed(offset);
 end
 
 assign offs_max = (offset_calc[16:15] == 2'b01);
