@@ -94,13 +94,24 @@ assign axi_trig       = axi_fifo_o[64] && axi_fifo_rdr;
 assign axi_sel        = axi_fifo_o[66:65];
 assign axi_val_byte_f = axi_fifo_o[74:67];
 
+reg adc_trig_prev;
+wire adc_trig_edge;
+always @(posedge axi_clk_i) begin
+  if (axi_rstn_i == 1'b0) begin
+    adc_trig_prev <= 1'b0;
+  end else begin
+    adc_trig_prev <= adc_trig_i;
+  end
+end
+assign adc_trig_edge = adc_trig_i && ~adc_trig_prev;
+
 always @(posedge axi_clk_i) begin
   if (axi_rstn_i == 1'b0) begin
     axi_trg_rd_reg <= 1'b0;
     axi_trg_rd     <= 1'b0;
   end else begin
-    axi_trg_rd_reg <= adc_trig_i;
-    if (~axi_trg_rd_reg && adc_trig_i) //check if trigger happenned
+    axi_trg_rd_reg <= adc_trig_edge;
+    if (~axi_trg_rd_reg && adc_trig_edge) //check if trigger happenned
       axi_trg_rd <= 1'b1; //register remains 1 until next arm or reset
     else if (adc_rst_do_i || adc_arm_do_i)
       axi_trg_rd <= 1'b0;
@@ -113,7 +124,7 @@ always @(posedge axi_clk_i) begin
   end else begin
     if (adc_arm_do_i && set_axi_en_i)
       axi_we <= 1'b1 ;
-    else if (((axi_dly_do || adc_trig_i) && (axi_dly_cnt == 32'h1)) || adc_rst_do_i) //delay reached or reset
+    else if (((axi_dly_do || adc_trig_edge) && (axi_dly_cnt == 32'h1)) || adc_rst_do_i) //delay reached or reset
       axi_we <= 1'b0 ;
   end
 end
@@ -125,14 +136,14 @@ always @(posedge axi_clk_i) begin
       axi_dly_end <=  1'b0      ;
       axi_dly_end_reg <= 1'b0   ;
   end else begin
-    if (adc_trig_i && axi_we)
+    if (adc_trig_edge && axi_we)
       axi_dly_do  <= 1'b1 ;
     else if ((axi_dly_do && (axi_dly_cnt <= 32'h1)) || axi_clr || adc_arm_do_i) // end of delay
       axi_dly_do  <= 1'b0 ;
 
     axi_dly_end_reg <= axi_dly_do; 
 
-    if ((axi_dly_do && axi_we && axi_dv_i) || (adc_trig_i && set_dec1_i)) // shorthen by 1 if decimation is 1
+    if ((axi_dly_do && axi_we && axi_dv_i) || (adc_trig_edge && set_dec1_i)) // shorthen by 1 if decimation is 1
       axi_dly_cnt <= axi_dly_cnt - 1;
     else if (!axi_dly_do)
       axi_dly_cnt <= set_dly_i ;
@@ -174,7 +185,7 @@ always @(posedge axi_clk_i) begin
   if (axi_rstn_i == 1'b0) begin
     axi_md           <=  3'h0;
   end else begin
-    if (adc_trig_i)
+    if (adc_trig_edge)
       axi_md <= {axi_dat_sel,(!axi_dly_do && axi_we)}; //valid trig
     else if (axi_dat_dv)
       axi_md <= 3'h0;
