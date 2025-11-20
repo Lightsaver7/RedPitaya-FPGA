@@ -16,11 +16,10 @@ MODEL ?= Z20_G2
 HWID  ?= ""
 DEFINES ?= ""
 DTS_VER ?= 2022.1
-VIVADO_OPTS ?= 
+VIVADO_OPTS ?=
 
 # build artefacts
-FPGA_BIT    = prj/$(PRJ)/out/red_pitaya.bit
-FPGA_BIN    = prj/$(PRJ)/out/red_pitaya.bit.bin
+FPGA_BIN    = prj/$(PRJ)/out/red_pitaya.bin
 FSBL_ELF    = prj/$(PRJ)/sdk/fsbl/executable.elf
 MEMTEST_ELF = prj/$(PRJ)/sdk/dram_test/executable.elf
 DEVICE_TREE = prj/$(PRJ)/sdk/dts/system.dts
@@ -35,14 +34,14 @@ BOOTGEN= bootgen -image prj/$(PRJ)/out/red_pitaya.bif -arch zynq -process_bitstr
 
 .PHONY: all clean project sim
 
-all: $(FPGA_BIT) $(FSBL_ELF) $(DEVICE_TREE) $(FPGA_BIN)
+all: $(FPGA_BIN) $(FSBL_ELF) $(DEVICE_TREE)
 
 # TODO: clean should go into each project
 clean:
 	rm -rf out .Xil .srcs sdk project sim
 	rm -rf prj/$(PRJ)/out prj/$(PRJ)/.Xil prj/$(PRJ)/.srcs prj/$(PRJ)/sdk prj/$(PRJ)/project
 
-sim: 
+sim:
 	vivado -source red_pitaya_vivado_sim.tcl -tclargs $(PRJ) $(MODEL) $(DEFINES)
 
 project:
@@ -52,7 +51,7 @@ else
 	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
 endif
 
-$(FPGA_BIT):
+$(FPGA_BIN):
 ifneq ($(HWID),"")
 	$(VIVADO) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID)
 else
@@ -60,12 +59,9 @@ else
 endif
 	./synCheck.sh
 
-$(FSBL_ELF): $(FPGA_BIT)
+$(FSBL_ELF): $(FPGA_BIN)
 	xsct red_pitaya_hsi_fsbl.tcl $(PRJ)
 
-$(DEVICE_TREE): $(FPGA_BIT)
+$(DEVICE_TREE): $(FPGA_BIN)
 	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER)
 
-$(FPGA_BIN): $(FPGA_BIT)
-	@echo all:{$(FPGA_BIT)} > prj/$(PRJ)/out/red_pitaya.bif
-	$(BOOTGEN)

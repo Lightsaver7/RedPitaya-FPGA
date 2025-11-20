@@ -14,7 +14,7 @@ set path_sdk sdk
 hsi open_hw_design $path_sdk/red_pitaya.sysdef
 #hsi::open_hw_design $path_sdk/red_pitaya.sysdef
 
-set ver 2017.2
+set ver 2025.1
 
 foreach item $argv {
   puts "Input arfguments: $argv"
