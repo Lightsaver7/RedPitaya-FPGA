@@ -20,8 +20,8 @@ set path_brd ../../brd
 set path_rtl rtl
 set path_ip      ip
 set path_ip_top  ../../ip
-set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
-#set path_bd  project/redpitaya.srcs/sources_1/bd/system
+set path_bd  project/redpitaya.gen/sources_1/bd/system/hdl
+#set path_bd  project/redpitaya.gen/sources_1/bd/system
 set path_sdc ../../sdc
 set path_sdc_prj sdc
 
@@ -85,11 +85,11 @@ add_files                         $ip_files
 }
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
+source ${path_ip_top}/asg_dat_fifo/asg_dat_fifo.tcl
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-add_files $path_ip_top/sync_fifo/sync_fifo.xci
+source ${path_ip_top}/sync_fifo/sync_fifo.tcl
 }
 
 upgrade_ip [get_ips *] 

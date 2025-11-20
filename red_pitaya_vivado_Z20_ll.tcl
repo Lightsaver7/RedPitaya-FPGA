@@ -108,16 +108,13 @@ add_file                         $ip_files
 #}
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-add_file $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
-upgrade_ip [get_ips asg_dat_fifo]
-synth_ip [get_ips asg_dat_fifo]
+source ${path_ip_top}/asg_dat_fifo/asg_dat_fifo.tcl
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-add_file $path_ip_top/sync_fifo/sync_fifo.xci
-upgrade_ip [get_ips sync_fifo]
-synth_ip [get_ips sync_fifo]
+source ${path_ip_top}/sync_fifo/sync_fifo.tcl
 }
+
 
 #upgrade_ip [get_ips *] 
 ##synth_ip [get_ips *]

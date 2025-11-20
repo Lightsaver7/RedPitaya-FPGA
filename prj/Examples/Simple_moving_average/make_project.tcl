@@ -6,7 +6,7 @@ set fpga_path ../../..
 set path_brd ./$fpga_path/brd
 set path_rtl rtl
 set path_ip  ip
-set path_bd  project/redpitaya.srcs/sources_1/bd/system/hdl
+set path_bd  project/redpitaya.gen/sources_1/bd/system/hdl
 set path_sdc ./$fpga_path/sdc
 set path_sdc_prj sdc
 set path_tbn tbn
