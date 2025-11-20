@@ -177,4 +177,6 @@ write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \
                          -file    $path_sdk/red_pitaya.sysdef
 
+write_hw_platform -force          $path_sdk/red_pitaya.xsa
+
 exit

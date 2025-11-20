@@ -116,7 +116,7 @@ source ${path_ip_top}/sync_fifo/sync_fifo.tcl
 }
 
 
-#upgrade_ip [get_ips *] 
+#upgrade_ip [get_ips *]
 ##synth_ip [get_ips *]
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
@@ -178,7 +178,7 @@ report_io                -file    $path_out/post_imp_io.rpt
 xilinx::ultrafast::report_io_reg -verbose -file $path_out/post_route_iob.rpt
 
 ################################################################################
-# write debug probes 
+# write debug probes
 ################################################################################
 
 
@@ -200,5 +200,7 @@ write_bitstream -force -bin_file  $path_out/red_pitaya
 write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \
                          -file    $path_sdk/red_pitaya.sysdef
+
+write_hw_platform -force          $path_sdk/red_pitaya.xsa
 
 exit
