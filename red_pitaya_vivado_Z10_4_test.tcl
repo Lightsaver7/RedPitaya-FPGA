@@ -25,7 +25,7 @@ tclapp::install -quiet ultrafast
 set path_brd ../../brd
 set path_rtl rtl
 set path_ip  ip
-set path_bd  $prj_dir/.gen/sources_1/bd/system/hdl
+set path_bd  .gen/sources_1/bd/system/hdl
 #set path_bd  .srcs/sources_1/bd/system
 set path_sdc ../../sdc
 set path_sdc_prj sdc

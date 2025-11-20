@@ -23,7 +23,7 @@ set path_ip      ip
 set path_ip_top  ../../ip_250
 set path_sdc sdc_250
 set path_sdc_prj sdc
-set path_bd  $prj_dir/.gen/sources_1/bd/system/hdl
+set path_bd  .gen/sources_1/bd/system/hdl
 
 
 ################################################################################

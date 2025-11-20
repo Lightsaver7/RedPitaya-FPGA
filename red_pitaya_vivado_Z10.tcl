@@ -28,7 +28,7 @@ set path_rtl rtl
 set path_ip      ip
 set path_ip_top  ../../ip
 #set path_bd  .srcs/sources_1/bd/system
-set path_bd  $prj_dir/.gen/sources_1/bd/system/hdl
+set path_bd  .gen/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_sdc_prj sdc
 
@@ -103,7 +103,7 @@ source ${path_ip_top}/asg_dat_fifo/asg_dat_fifo.tcl
 }
 
 if {[file isdirectory $path_ip_top/sync_fifo]} {
-source ${path_ip_top}/asg_dat_fifo/sync_fifo.xci
+source ${path_ip_top}/sync_fifo/sync_fifo.tcl
 }
 
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
