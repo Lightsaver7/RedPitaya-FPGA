@@ -148,6 +148,9 @@ wait_on_run synth_1
 set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
 file copy -force $rptFiles ./$path_out/
 
+set_property platform.board_id "redpitaya" [current_project]
+set_property platform.name "redpitaya_platform" [current_project]
+write_hw_platform -force          $path_sdk/red_pitaya.xsa
 
 ################################################################################
 # run placement and router
@@ -186,9 +189,5 @@ write_bitstream -force -bin_file  $path_out/red_pitaya
 write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \
                          -file    $path_sdk/red_pitaya.sysdef
-
-set_property platform.board_id "redpitaya" [current_project]
-set_property platform.name "redpitaya_platform" [current_project]
-write_hw_platform -force          $path_sdk/red_pitaya.xsa
 
 exit
