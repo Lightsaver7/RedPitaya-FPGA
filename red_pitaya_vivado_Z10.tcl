@@ -128,12 +128,6 @@ write_checkpoint         -force   $path_out/post_synth
 report_timing_summary    -file    $path_out/post_synth_timing_summary.rpt
 report_power             -file    $path_out/post_synth_power.rpt
 
-launch_runs synth_1
-wait_on_run synth_1
-
-set_property platform.board_id "redpitaya" [current_project]
-set_property platform.name "redpitaya_platform" [current_project]
-write_hw_platform -force          $path_sdk/red_pitaya.xsa
 
 ################################################################################
 # run placement and logic optimization
@@ -187,6 +181,12 @@ write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \
                          -file    $path_sdk/red_pitaya.sysdef
 
+reset_run synth_1
+launch_runs synth_1
+wait_on_run synth_1
 
+set_property platform.board_id "redpitaya" [current_project]
+set_property platform.name "redpitaya_platform" [current_project]
+write_hw_platform -fixed -force -file $path_sdk/red_pitaya.xsa
 
 exit
