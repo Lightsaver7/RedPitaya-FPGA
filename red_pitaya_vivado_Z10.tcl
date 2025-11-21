@@ -7,6 +7,8 @@
 
 set prj_name [lindex $argv 0]
 set prj_defs [lindex $argv 1]
+set prj_top "red_pitaya_top"
+set prj_dir "build"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
 cd prj/$prj_name
@@ -27,8 +29,7 @@ set path_brd ../../brd
 set path_rtl rtl
 set path_ip      ip
 set path_ip_top  ../../ip
-#set path_bd  .srcs/sources_1/bd/system
-set path_bd  .gen/sources_1/bd/system/hdl
+set path_bd  $prj_dir/redpitaya.gen/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_sdc_prj sdc
 
@@ -70,6 +71,8 @@ set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
 
 # generate SDK files
 generate_target all [get_files    system.bd]
+make_wrapper -files [get_files *.bd] -top
+
 write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 
 ################################################################################
@@ -111,6 +114,7 @@ add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 set gith [exec git log -1 --format="%H"]
 set_property generic "GITH=160'h$gith" [current_fileset]
+set_property top $prj_top [current_fileset]
 
 ################################################################################
 # run synthesis
@@ -132,7 +136,7 @@ file copy -force $rptFiles ./$path_out/
 # write checkpoint design
 ################################################################################
 
-launch_runs impl_1 -jobs 2
+launch_runs impl_1
 wait_on_run impl_1
 
 set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]
@@ -143,12 +147,12 @@ foreach file $rptFiles {
 # generate a bitstream
 ################################################################################
 
-set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-
-launch_runs impl_1 -to_step write_bitstream
+#launch_runs impl_1 -to_step write_bitstream
+#wait_on_run impl_1
 
 open_run impl_1
-write_bitstream -force            $path_out/red_pitaya.bit
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+write_bitstream -force            $path_out/red_pitaya
 write_bitstream -force -bin_file  $path_out/red_pitaya
 
 
@@ -161,8 +165,15 @@ write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \
                          -file    $path_sdk/red_pitaya.sysdef
 
-#set_property platform.board_id "redpitaya" [current_project]
-#set_property platform.name "redpitaya_platform" [current_project]
-#write_hw_platform -fixed -force -file $path_sdk/red_pitaya.xsa
+
+set_property platform.default_output_type "sd_card" [current_project]
+set_property platform.board_id "redpitaya" [current_project]
+set_property platform.name "redpitaya_platform" [current_project]
+set_property platform.design_intent.embedded true [current_project]
+set_property platform.design_intent.external_host false [current_project]
+set_property platform.design_intent.datacenter false [current_project]
+set_property platform.design_intent.server_managed false [current_project]
+
+write_hw_platform -include_bit -force -file $path_sdk/red_pitaya.xsa
 
 exit

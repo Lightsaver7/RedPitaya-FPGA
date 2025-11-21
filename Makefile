@@ -15,14 +15,22 @@ PRJ   ?= v0.94
 MODEL ?= Z20_G2
 HWID  ?= ""
 DEFINES ?= ""
-DTS_VER ?= 2022.1
+DTS_VER ?= 2025.1
 VIVADO_OPTS ?=
+DL ?= dl
 
 # build artefacts
 FPGA_BIN    = prj/$(PRJ)/out/red_pitaya.bin
-FSBL_ELF    = prj/$(PRJ)/sdk/fsbl/executable.elf
+FSBL_ELF    = prj/$(PRJ)/sdk/fsbl.elf
 MEMTEST_ELF = prj/$(PRJ)/sdk/dram_test/executable.elf
 DEVICE_TREE = prj/$(PRJ)/sdk/dts/system.dts
+
+DTREE_TAG      = xilinx_v$(DTS_VER)
+DTREE_PATH_TAG = xilinx-v$(DTS_VER)
+DTREE_TAR      = $(DL)/device-tree-xlnx-$(DTREE_TAG).tar.gz
+DTREE_URL      = https://github.com/Xilinx/device-tree-xlnx/archive/$(DTREE_TAG).tar.gz
+#DTREE_URL      = https://github.com/Xilinx/system-device-tree-xlnx/archive/$(DTREE_TAG).tar.gz
+DTREE_DIR      = $(DL)/device-tree-xlnx-$(DTREE_PATH_TAG)
 
 # Vivado from Xilinx provides IP handling, FPGA compilation
 # hsi (hardware software interface) provides software integration
@@ -34,15 +42,31 @@ BOOTGEN= bootgen -image prj/$(PRJ)/out/red_pitaya.bif -arch zynq -process_bitstr
 
 .PHONY: all clean project sim
 
-all: $(FPGA_BIN) $(FSBL_ELF) $(DEVICE_TREE)
+all: $(FPGA_BIN) $(FSBL_ELF) $(DEVICE_TREE) $(DTREE_DIR)
 
 # TODO: clean should go into each project
 clean:
 	rm -rf out .Xil .srcs sdk project sim
 	rm -rf prj/$(PRJ)/out prj/$(PRJ)/.Xil prj/$(PRJ)/.srcs prj/$(PRJ)/sdk prj/$(PRJ)/project
+	rm -rf prj/$(PRJ)/build
+	rm -rf prj/$(PRJ)/.gen
+	rm -rf prj/$(PRJ)/build-fsbl
+	rm -rf $(DL)
 
 sim:
 	vivado -source red_pitaya_vivado_sim.tcl -tclargs $(PRJ) $(MODEL) $(DEFINES)
+
+$(DL):
+	mkdir -p $@
+
+$(DTREE_TAR): | $(DL)
+	curl -L $(DTREE_URL) -o $@
+
+$(DTREE_DIR): $(DTREE_TAR)
+	mkdir -p $@
+	tar -zxf $< --strip-components=1 --directory=$@
+
+a: $(DTREE_DIR)
 
 project:
 ifneq ($(HWID),"")
@@ -62,6 +86,7 @@ endif
 $(FSBL_ELF): $(FPGA_BIN)
 	xsct red_pitaya_hsi_fsbl.tcl $(PRJ)
 
-$(DEVICE_TREE): $(FPGA_BIN)
+$(DEVICE_TREE): $(DTREE_DIR) # $(FPGA_BIN)
 	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER)
 
+dts: $(DEVICE_TREE)
