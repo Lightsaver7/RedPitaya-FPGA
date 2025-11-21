@@ -51,8 +51,7 @@ set_param iconstr.diffPairPulltype {opposite}
 
 set part xc7z010clg400-1
 
-create_project -in_memory -part $part
-
+create_project -part $part -force redpitaya $prj_dir
 
 ################################################################################
 # create PS BD (processing system block design)
@@ -66,10 +65,8 @@ set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
-
-set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
-
 source                            $path_ip/systemZ10.tcl
+set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
 
 # generate SDK files
 generate_target all [get_files    system.bd]
@@ -121,13 +118,13 @@ set_property generic "GITH=160'h$gith" [current_fileset]
 # write checkpoint design
 ################################################################################
 
-#synth_design -top red_pitaya_top
-synth_design -top red_pitaya_top -flatten_hierarchy none -bufg 16 -keep_equivalent_registers
+update_compile_order -fileset sources_1
 
-write_checkpoint         -force   $path_out/post_synth
-report_timing_summary    -file    $path_out/post_synth_timing_summary.rpt
-report_power             -file    $path_out/post_synth_power.rpt
+launch_runs synth_1
+wait_on_run synth_1
 
+set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
+file copy -force $rptFiles ./$path_out/
 
 ################################################################################
 # run placement and logic optimization
@@ -135,58 +132,37 @@ report_power             -file    $path_out/post_synth_power.rpt
 # write checkpoint design
 ################################################################################
 
-opt_design
-power_opt_design
-place_design
-phys_opt_design
-write_checkpoint         -force   $path_out/post_place
-report_timing_summary    -file    $path_out/post_place_timing_summary.rpt
-#write_hwdef              -file    $path_sdk/red_pitaya.hwdef
+launch_runs impl_1 -jobs 2
+wait_on_run impl_1
 
-################################################################################
-# run router
-# report actual utilization and timing,
-# write checkpoint design
-# run drc, write verilog and xdc out
-################################################################################
-
-route_design
-write_checkpoint         -force   $path_out/post_route
-report_timing_summary    -file    $path_out/post_route_timing_summary.rpt
-report_timing            -file    $path_out/post_route_timing.rpt -sort_by group -max_paths 100 -path_type summary
-report_clock_utilization -file    $path_out/clock_util.rpt
-report_utilization       -file    $path_out/post_route_util.rpt
-report_power             -file    $path_out/post_route_power.rpt
-report_drc               -file    $path_out/post_imp_drc.rpt
-report_io                -file    $path_out/post_imp_io.rpt
-#write_verilog            -force   $path_out/bft_impl_netlist.v
-#write_xdc -no_fixed_only -force   $path_out/bft_impl.xdc
-
-xilinx::ultrafast::report_io_reg -verbose -file $path_out/post_route_iob.rpt
-
+set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]
+foreach file $rptFiles {
+   file copy -force $file ./$path_out/
+}
 ################################################################################
 # generate a bitstream
 ################################################################################
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 
+launch_runs impl_1 -to_step write_bitstream
+
+open_run impl_1
 write_bitstream -force            $path_out/red_pitaya.bit
 write_bitstream -force -bin_file  $path_out/red_pitaya
+
 
 ################################################################################
 # generate system definition
 ################################################################################
 
+
 write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
                          -bitfile $path_out/red_pitaya.bit \
                          -file    $path_sdk/red_pitaya.sysdef
 
-reset_run synth_1
-launch_runs synth_1
-wait_on_run synth_1
-
-set_property platform.board_id "redpitaya" [current_project]
-set_property platform.name "redpitaya_platform" [current_project]
-write_hw_platform -fixed -force -file $path_sdk/red_pitaya.xsa
+#set_property platform.board_id "redpitaya" [current_project]
+#set_property platform.name "redpitaya_platform" [current_project]
+#write_hw_platform -fixed -force -file $path_sdk/red_pitaya.xsa
 
 exit
