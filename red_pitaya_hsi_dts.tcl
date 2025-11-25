@@ -10,9 +10,8 @@ set prj_name [lindex $argv 0]
 cd prj/$prj_name
 
 set path_sdk sdk
-
-#hsi open_hw_design $path_sdk/red_pitaya.sysdef
-#hsi::open_hw_design $path_sdk/red_pitaya.sysdef
+set xsa_file $path_sdk/red_pitaya.xsa
+set output_dir out/dts
 
 
 set ver 2025.1
@@ -26,36 +25,31 @@ foreach item $argv {
     }
   }
 }
+
 puts "DTS version: $ver"
-
-
-#hsi set_repo_path ../../../tmp/device-tree-xlnx-xilinx-v$ver/
-
-#hsi create_sw_design device-tree -os device_tree -proc ps7_cortexa9_0
-
-#hsi set_property CONFIG.kernel_version $ver [hsi get_os]
-#hsi set_property CONFIG.dt_overlay true [hsi get_os]
-
-#hsi generate_target -dir $path_sdk/dts
-
-set xsa_file $path_sdk/red_pitaya.xsa
-set output_dir out/dts
-
 puts "Cur dir: [pwd]"
 
-hsi open_hw_design $xsa_file
-hsi set_repo_path ../../dl/device-tree-xlnx-xilinx-v$ver/
-hsi create_sw_design device-tree -os device_tree -proc ps7_cortexa9_0
-hsi set_property CONFIG.kernel_version $ver [hsi get_os]
-hsi set_property CONFIG.dt_overlay true [hsi::get_os]
-#hsi set_property CONFIG.dt_zocl true [hsi get_os]
-hsi generate_target -dir $output_dir
+#  The old method of creating a device tree is now deprecated.
+##hsi open_hw_design $xsa_file
+##hsi open_hw_design $path_sdk/red_pitaya.sysdef
+#hsi set_repo_path ../../dl/device-tree-xlnx-xilinx-v$ver/
+#hsi create_sw_design device-tree -os device_tree -proc ps7_cortexa9_0
+#hsi set_property CONFIG.kernel_version $ver [hsi get_os]
+#hsi set_property CONFIG.dt_overlay true [hsi::get_os]
+#hsi generate_target -dir $output_dir
 
-exit
+#########################################################################
 
-sdtgen set_dt_param -xsa $xsa_file -dir $output_dir
-sdtgen set_dt_param -repo ../../dl/device-tree-xlnx-xilinx-v$ver/
-sdtgen set_dt_param -zocl enable
-puts "INFO: Generating device tree source files to $output_dir"
-sdtgen generate_sdt
+# New method for creating device tree, does not support overlay yet.
+
+#sdtgen set_dt_param -xsa $xsa_file -dir $output_dir
+#sdtgen set_dt_param -repo ../../dl/device-tree-xlnx-xilinx-v$ver/
+#sdtgen set_dt_param -zocl enable
+#sdtgen generate_sdt
+
+#########################################################################
+
+
+createdts -hw $xsa_file -platform-name redpitaya_platform -git-branch xlnx_rel_v$ver -overlay -out $output_dir
+
 puts "INFO: Device Tree generation complete."

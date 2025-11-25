@@ -30,6 +30,7 @@ set path_rtl rtl
 set path_ip      ip
 set path_ip_top  ../../ip
 set path_bd  $prj_dir/redpitaya.gen/sources_1/bd/system/hdl
+set path_bd_src  $prj_dir/redpitaya.srcs/sources_1/bd/system
 set path_sdc ../../sdc
 set path_sdc_prj sdc
 
@@ -174,6 +175,6 @@ set_property platform.design_intent.external_host false [current_project]
 set_property platform.design_intent.datacenter false [current_project]
 set_property platform.design_intent.server_managed false [current_project]
 
-write_hw_platform -include_bit -force -file $path_sdk/red_pitaya.xsa
+write_hw_platform -force -file $path_sdk/red_pitaya.xsa
 
 exit

@@ -370,6 +370,8 @@ proc create_root_design { parentCell } {
    CONFIG.C_EXT_RST_WIDTH {1} \
  ] $proc_sys_reset
 
+  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0 ]
+
    create_bd_cell -type ip -vlnv xilinx.com:ip:axi_register_slice:2.1 axi_register_slice_0
 
   # Create instance: processing_system7, and set properties
@@ -879,6 +881,10 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xadc_ip2intc_irpt [get_bd_pins processing_system7/IRQ_F2P] [get_bd_pins xadc/ip2intc_irpt]
   connect_bd_net -net xlconstant_dout [get_bd_pins proc_sys_reset/aux_reset_in] [get_bd_pins xlconstant/dout]
 
+  connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_ports FCLK_CLK0] [get_bd_pins processing_system7/FCLK_CLK0] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net processing_system7_0_fclk_reset0_n [get_bd_ports FCLK_RESET0_N] [get_bd_pins processing_system7/FCLK_RESET0_N] [get_bd_pins proc_sys_reset_0/ext_reset_in]
+  connect_bd_net -net xlconstant_dout [get_bd_pins proc_sys_reset_0/aux_reset_in] [get_bd_pins xlconstant/dout]
+
   # Create address segments
   assign_bd_address -offset 0x40000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces processing_system7/Data] [get_bd_addr_segs M_AXI_GP0/Reg] -force
   assign_bd_address -offset 0x83C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7/Data] [get_bd_addr_segs xadc/s_axi_lite/Reg] -force
@@ -891,6 +897,17 @@ proc create_root_design { parentCell } {
   current_bd_instance $oldCurInst
 
   validate_bd_design
+
+  set_property PFM.CLOCK { \
+    FCLK_CLK0 {id "0" is_default "true" proc_sys_reset "/proc_sys_reset_0"} \
+    FCLK_CLK1 {id "1" is_default "false"} \
+    FCLK_CLK2 {id "2" is_default "false"} \
+    FCLK_CLK3 {id "3" is_default "false"} \
+  } [get_bd_cells /processing_system7]
+
+
+  set_property pfm_name "redpitaya_platform" [get_files -all {system.bd}]
+
   save_bd_design
 }
 # End of create_root_design()

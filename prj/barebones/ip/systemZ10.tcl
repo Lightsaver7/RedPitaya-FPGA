@@ -124,6 +124,7 @@ set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\
 xilinx.com:ip:processing_system7:5.5\
+xilinx.com:ip:proc_sys_reset:5.0\
 "
 
    set list_ips_missing ""
@@ -643,17 +644,52 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_USE_S_AXI_HP3 {1} \
  ] $processing_system7
 
+  # Create instance: proc_sys_reset_0, and set properties
+  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0 ]
+
+  # Create instance: proc_sys_reset_1, and set properties
+  set proc_sys_reset_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_1 ]
+
+  # Create instance: proc_sys_reset_2, and set properties
+  set proc_sys_reset_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_2 ]
+
+  # Create instance: proc_sys_reset_3, and set properties
+  set proc_sys_reset_3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_3 ]
+
+
   # Create interface connections
   connect_bd_intf_net -intf_net processing_system7_0_ddr [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_fixed_io [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7/FIXED_IO]
 
   # Create port connections
-  connect_bd_net -net m_axi_gp0_aclk_1 [get_bd_ports M_AXI_GP0_ACLK] [get_bd_pins processing_system7/M_AXI_GP0_ACLK]
-  connect_bd_net -net processing_system7_0_fclk_clk3 [get_bd_pins processing_system7/FCLK_CLK3] [get_bd_pins processing_system7/M_AXI_GP1_ACLK]
-  connect_bd_net -net s_axi_hp0_aclk [get_bd_ports S_AXI_HP0_aclk] [get_bd_pins processing_system7/S_AXI_GP0_ACLK] [get_bd_pins processing_system7/S_AXI_HP0_ACLK]
-  connect_bd_net -net s_axi_hp1_aclk [get_bd_ports S_AXI_HP1_aclk] [get_bd_pins processing_system7/S_AXI_HP1_ACLK]
-  connect_bd_net -net s_axi_hp2_aclk [get_bd_ports S_AXI_HP2_aclk] [get_bd_pins processing_system7/S_AXI_HP2_ACLK]
-  connect_bd_net -net s_axi_hp3_aclk [get_bd_ports S_AXI_HP3_aclk] [get_bd_pins processing_system7/S_AXI_HP3_ACLK]
+  connect_bd_net -net m_axi_gp0_aclk_1  [get_bd_ports M_AXI_GP0_ACLK] \
+  [get_bd_pins processing_system7/M_AXI_GP0_ACLK]
+  connect_bd_net -net processing_system7_0_fclk_clk3  [get_bd_pins processing_system7/FCLK_CLK3] \
+  [get_bd_pins processing_system7/M_AXI_GP1_ACLK] \
+  [get_bd_pins proc_sys_reset_3/slowest_sync_clk]
+  connect_bd_net -net processing_system7_FCLK_CLK0  [get_bd_pins processing_system7/FCLK_CLK0] \
+  [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net processing_system7_FCLK_CLK1  [get_bd_pins processing_system7/FCLK_CLK1] \
+  [get_bd_pins proc_sys_reset_2/slowest_sync_clk]
+  connect_bd_net -net processing_system7_FCLK_CLK2  [get_bd_pins processing_system7/FCLK_CLK2] \
+  [get_bd_pins proc_sys_reset_1/slowest_sync_clk]
+  connect_bd_net -net processing_system7_FCLK_RESET0_N  [get_bd_pins processing_system7/FCLK_RESET0_N] \
+  [get_bd_pins proc_sys_reset_0/ext_reset_in]
+  connect_bd_net -net processing_system7_FCLK_RESET1_N  [get_bd_pins processing_system7/FCLK_RESET1_N] \
+  [get_bd_pins proc_sys_reset_2/ext_reset_in]
+  connect_bd_net -net processing_system7_FCLK_RESET2_N  [get_bd_pins processing_system7/FCLK_RESET2_N] \
+  [get_bd_pins proc_sys_reset_1/ext_reset_in]
+  connect_bd_net -net processing_system7_FCLK_RESET3_N  [get_bd_pins processing_system7/FCLK_RESET3_N] \
+  [get_bd_pins proc_sys_reset_3/ext_reset_in]
+  connect_bd_net -net s_axi_hp0_aclk  [get_bd_ports S_AXI_HP0_aclk] \
+  [get_bd_pins processing_system7/S_AXI_GP0_ACLK] \
+  [get_bd_pins processing_system7/S_AXI_HP0_ACLK]
+  connect_bd_net -net s_axi_hp1_aclk  [get_bd_ports S_AXI_HP1_aclk] \
+  [get_bd_pins processing_system7/S_AXI_HP1_ACLK]
+  connect_bd_net -net s_axi_hp2_aclk  [get_bd_ports S_AXI_HP2_aclk] \
+  [get_bd_pins processing_system7/S_AXI_HP2_ACLK]
+  connect_bd_net -net s_axi_hp3_aclk  [get_bd_ports S_AXI_HP3_aclk] \
+  [get_bd_pins processing_system7/S_AXI_HP3_ACLK]
 
   # Create address segments
 
@@ -662,6 +698,19 @@ proc create_root_design { parentCell } {
   current_bd_instance $oldCurInst
 
   validate_bd_design
+
+  set_property pfm_name "redpitaya_platform" [get_files -all {system.bd}]
+
+  set_property PFM.CLOCK { \
+     FCLK_CLK0 {id "0" is_default "true" proc_sys_reset "proc_sys_reset_0"} \
+  } [get_bd_cells /processing_system7]
+
+
+  set_property PFM.AXI_PORT { \
+    M_AXI_GP0 {memport "M_AXI_GP"} \
+    S_AXI_HP0 {memport "S_AXI_HP"} \
+  } [get_bd_cells /processing_system7]
+
   save_bd_design
 }
 # End of create_root_design()
