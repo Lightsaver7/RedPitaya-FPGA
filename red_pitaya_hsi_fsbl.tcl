@@ -44,7 +44,7 @@ puts "Platform generate DONE"
 
 puts "Cur dir: [pwd]"
 
-file copy $workspace_dir/$platform/zynq_fsbl/fsbl.elf out/fsbl.elf
+file copy -force $workspace_dir/$platform/zynq_fsbl/fsbl.elf out/fsbl.elf
 
 puts "INFO: FSBL generation and compilation complete in $workspace_dir/fsbl_app."
 

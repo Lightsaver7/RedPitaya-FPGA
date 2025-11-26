@@ -6,6 +6,7 @@
 
 PRJ   ?= v0.94
 MODEL ?= Z10
+RAM   ?= 512
 HWID  ?= ""
 DEFINES ?= ""
 DTS_VER ?= 2025.1
@@ -18,11 +19,13 @@ FPGA_BIN    = prj/$(PRJ)/out/red_pitaya.bin
 FSBL_ELF    = prj/$(PRJ)/sdk/fsbl.elf
 MEMTEST_ELF = prj/$(PRJ)/sdk/dram_test/executable.elf
 DEVICE_TREE = prj/$(PRJ)/sdk/dts/system.dts
+XSA 		= prj/$(PRJ)/sdk/red_pitaya.xsa
 
+VIVADO = vivado -nojournal -mode batch
 
 .PHONY: all project sim clean clean-all
 
-all: $(FPGA_BIN) $(FSBL_ELF) $(DEVICE_TREE) $(DTREE_DIR)
+all: $(FPGA_BIN) $(DEVICE_TREE) $(DTREE_DIR)
 
 clean-all:
 	@echo "Cleaning all projects in prj/: $(PROJECT_NAMES)"
@@ -61,10 +64,17 @@ else
 endif
 	./synCheck.sh
 
-$(FSBL_ELF): $(FPGA_BIN)
+$(XSA): $(FPGA_BIN)
+
+$(FSBL_ELF): $(XSA)
 	xsct red_pitaya_hsi_fsbl.tcl $(PRJ)
 
-$(DEVICE_TREE): $(FPGA_BIN)
+$(DEVICE_TREE): $(XSA)
 	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER)
 
 dts: $(DEVICE_TREE)
+
+
+fsbl:
+	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=$(RAM)
+	xsct red_pitaya_hsi_fsbl.tcl fsbl
