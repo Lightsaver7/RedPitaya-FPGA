@@ -12,6 +12,7 @@ cd prj/$prj_name
 set path_sdk sdk
 set xsa_file $path_sdk/red_pitaya.xsa
 set output_dir out/dts
+set output_dir2 out/dts2
 
 
 set ver 2025.1
@@ -42,9 +43,8 @@ puts "Cur dir: [pwd]"
 
 # New method for creating device tree, does not support overlay yet.
 
-#sdtgen set_dt_param -xsa $xsa_file -dir $output_dir
+#sdtgen set_dt_param -xsa $xsa_file -dir $output_dir2
 #sdtgen set_dt_param -repo ../../dl/device-tree-xlnx-xilinx-v$ver/
-#sdtgen set_dt_param -zocl enable
 #sdtgen generate_sdt
 
 #########################################################################

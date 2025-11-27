@@ -39,12 +39,7 @@ tclapp::install -quiet ultrafast
 
 set path_brd ../../brd
 set path_rtl rtl
-set path_ip      ip
-# set path_ip_top  ../../ip
-# set path_bd  $prj_dir/redpitaya.gen/sources_1/bd/system/hdl
-# set path_bd_src  $prj_dir/redpitaya.srcs/sources_1/bd/system
-# set path_sdc ../../sdc
-# set path_sdc_prj sdc
+set path_ip  ip
 
 set path_out out
 set path_sdk sdk
@@ -100,14 +95,6 @@ set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
 source  $path_ip/system.tcl
-# set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
-
-# generate SDK files
-# generate_target all [get_files system.bd]
-# make_wrapper -files [get_files *.bd] -top
-
-#write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
-
 
 ################################################################################
 # read files:
@@ -120,25 +107,7 @@ add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
 add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
 
 add_files                         ../../$path_rtl
-# add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
-
 add_files                         $path_rtl
-# add_files                         $path_bd
-
-# set ip_files [glob -nocomplain $path_ip/*.xci]
-# if {$ip_files != ""} {
-# add_files                         $ip_files
-# }
-
-# if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-# source ${path_ip_top}/asg_dat_fifo/asg_dat_fifo.tcl
-# }
-
-# if {[file isdirectory $path_ip_top/sync_fifo]} {
-# source ${path_ip_top}/sync_fifo/sync_fifo.tcl
-# }
-
-# add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ################################################################################
 # ser parameter containing Git hash

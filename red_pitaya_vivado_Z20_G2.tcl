@@ -49,6 +49,7 @@ set_param iconstr.diffPairPulltype {opposite}
 ################################################################################
 
 set part xc7z020clg400-1
+set ::cpu_part xc7z010clg400-1
 
 create_project -in_memory -part $part
 
@@ -66,7 +67,7 @@ set ::hp3_clk_freq 250000000
 
 set_property verilog_define [concat Z20_G2 Z20_xx $prj_defs] [current_fileset]
 
-source                            $path_ip/systemZ20_G2.tcl
+source                            $path_ip/system.tcl
 
 # generate SDK files
 generate_target all [get_files    system.bd]

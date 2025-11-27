@@ -52,6 +52,7 @@ set_param iconstr.diffPairPulltype {opposite}
 ################################################################################
 
 set part xc7z010clg400-1
+set ::cpu_part xc7z010clg400-1
 
 create_project -part $part -force redpitaya $prj_dir
 
@@ -59,15 +60,20 @@ create_project -part $part -force redpitaya $prj_dir
 # create PS BD (processing system block design)
 ################################################################################
 
-# file was created from GUI using "write_bd_tcl -force ip/systemZ10.tcl"
 # create PS BD
 set ::gpio_width 24
+
+set ::clk0_freq 125000000
+set ::clk1_freq 250000000
+set ::clk2_freq 50000000
+set ::clk3_freq 200000000
+
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
-source                            $path_ip/systemZ10.tcl
+source $path_ip/system.tcl
 set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
 
 # generate SDK files
@@ -162,9 +168,9 @@ write_bitstream -force -bin_file  $path_out/red_pitaya
 ################################################################################
 
 
-write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
-                         -bitfile $path_out/red_pitaya.bit \
-                         -file    $path_sdk/red_pitaya.sysdef
+# write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
+#                          -bitfile $path_out/red_pitaya.bit \
+#                          -file    $path_sdk/red_pitaya.sysdef
 
 
 set_property platform.default_output_type "sd_card" [current_project]
