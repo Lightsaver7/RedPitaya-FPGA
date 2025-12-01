@@ -76,5 +76,5 @@ dts: $(DEVICE_TREE)
 
 
 fsbl:
-	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=$(RAM)
+	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=$(RAM) DTS_VER=$(DTS_VER)
 	xsct red_pitaya_hsi_fsbl.tcl fsbl

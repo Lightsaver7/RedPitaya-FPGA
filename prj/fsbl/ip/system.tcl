@@ -17,6 +17,23 @@ proc get_script_folder {} {
 variable script_folder
 set script_folder [_tcl::get_script_folder]
 
+if {![info exists ::cpu_part]} {
+    error "Variable cpu_part not defined"
+}
+
+if {![info exists ::bus_w_bit]} {
+    error "Variable bus_w_bit not defined"
+}
+
+if {![info exists ::dram_w_bit]} {
+    error "Variable dram_w_bit not defined"
+}
+
+if {![info exists ::gpio_width]} {
+    error "Variable gpio_width not defined"
+}
+
+
 ################################################################
 # Check if script is running in correct Vivado version.
 ################################################################
@@ -191,6 +208,10 @@ proc create_root_design { parentCell } {
 
   set FIXED_IO [ create_bd_intf_port -mode Master -vlnv xilinx.com:display_processing_system7:fixedio_rtl:1.0 FIXED_IO ]
 
+  set FCLK_CLK0 [ create_bd_port -dir O -type clk FCLK_CLK0 ]
+  set_property -dict [ list CONFIG.FREQ_HZ {125000000} ] $FCLK_CLK0
+
+  set FCLK_RESET0_N [ create_bd_port -dir O -type rst FCLK_RESET0_N ]
 
   # Create ports
   set M_AXI_GP0_ACLK [ create_bd_port -dir I -type clk -freq_hz 125000000 M_AXI_GP0_ACLK ]
@@ -324,6 +345,8 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_I2C0_GRP_INT_ENABLE {0} \
    CONFIG.PCW_I2C0_I2C0_IO {MIO 50 .. 51} \
    CONFIG.PCW_I2C0_PERIPHERAL_ENABLE {1} \
+   CONFIG.PCW_I2C0_PERIPHERAL_CLKSRC {IO PLL} \
+   CONFIG.PCW_I2C0_PERIPHERAL_DIVISOR0 {10} \
    CONFIG.PCW_I2C0_RESET_ENABLE {0} \
    CONFIG.PCW_I2C1_GRP_INT_ENABLE {1} \
    CONFIG.PCW_I2C1_GRP_INT_IO {EMIO} \
@@ -638,12 +661,12 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_UART_PERIPHERAL_VALID {1} \
    CONFIG.PCW_UIPARAM_ACT_DDR_FREQ_MHZ {533.333374} \
    CONFIG.PCW_UIPARAM_DDR_BANK_ADDR_COUNT {3} \
-   CONFIG.PCW_UIPARAM_DDR_BUS_WIDTH $::ram_bit \
+   CONFIG.PCW_UIPARAM_DDR_BUS_WIDTH $::bus_w_bit \
    CONFIG.PCW_UIPARAM_DDR_CL {7} \
    CONFIG.PCW_UIPARAM_DDR_COL_ADDR_COUNT {10} \
    CONFIG.PCW_UIPARAM_DDR_CWL {6} \
    CONFIG.PCW_UIPARAM_DDR_DEVICE_CAPACITY {4096 MBits} \
-   CONFIG.PCW_UIPARAM_DDR_DRAM_WIDTH $::ram_bit \
+   CONFIG.PCW_UIPARAM_DDR_DRAM_WIDTH $::dram_w_bit \
    CONFIG.PCW_UIPARAM_DDR_ECC {Disabled} \
    CONFIG.PCW_UIPARAM_DDR_PARTNO {MT41J256M16 RE-125} \
    CONFIG.PCW_UIPARAM_DDR_ROW_ADDR_COUNT {15} \
@@ -677,7 +700,11 @@ proc create_root_design { parentCell } {
 
   # Create port connections
   connect_bd_net -net m_axi_gp0_aclk_1 [get_bd_ports M_AXI_GP0_ACLK] [get_bd_pins processing_system7/M_AXI_GP0_ACLK]
+
   connect_bd_net -net processing_system7_0_fclk_clk3 [get_bd_pins processing_system7/FCLK_CLK3] [get_bd_pins processing_system7/M_AXI_GP1_ACLK]
+  connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_ports FCLK_CLK0] [get_bd_pins processing_system7/FCLK_CLK0]
+  connect_bd_net -net processing_system7_0_fclk_reset0_n [get_bd_ports FCLK_RESET0_N] [get_bd_pins processing_system7/FCLK_RESET0_N]
+
   connect_bd_net -net s_axi_hp0_aclk [get_bd_ports S_AXI_HP0_aclk] [get_bd_pins processing_system7/S_AXI_GP0_ACLK] [get_bd_pins processing_system7/S_AXI_HP0_ACLK]
   connect_bd_net -net s_axi_hp1_aclk [get_bd_ports S_AXI_HP1_aclk] [get_bd_pins processing_system7/S_AXI_HP1_ACLK]
   connect_bd_net -net s_axi_hp2_aclk [get_bd_ports S_AXI_HP2_aclk] [get_bd_pins processing_system7/S_AXI_HP2_ACLK]

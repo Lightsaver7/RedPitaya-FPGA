@@ -58,28 +58,32 @@ set_param iconstr.diffPairPulltype {opposite}
 # setup an in memory project
 ################################################################################
 
-if {$board_cpu_model != "Z10"} {
+if {$board_cpu_model == "Z10"} {
    set part xc7z010clg400-1
    set ::cpu_part xc7z010clg400-1
    set ::gpio_width 24
 }
 
-if {$board_cpu_model != "Z20"} {
+if {$board_cpu_model == "Z20"} {
    set part xc7z020clg400-1
    set ::cpu_part xc7z020clg400-1
    set ::gpio_width 33
 }
 
-if {$board_ram_size != "512"} {
-   set part xc7z010clg400-1
-   set ::ram_bit "16 Bits"
-
+if {$board_ram_size == "512"} {
+   set ::bus_w_bit "16 Bit"
+   set ::dram_w_bit "16 Bits"
 }
 
-if {$board_ram_size != "1024"} {
-   set part xc7z020clg400-1
-   set ::ram_bit "32 Bits"
+if {$board_ram_size == "1024"} {
+   set ::bus_w_bit "32 Bit"
+   set ::dram_w_bit "32 Bits"
 }
+
+if {![info exists part]} {
+    error "Variable cpu_part not defined"
+}
+
 
 create_project -part $part -force redpitaya $prj_dir
 
@@ -95,6 +99,8 @@ set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
 source  $path_ip/system.tcl
+
+# generate SDK files
 
 ################################################################################
 # read files:
