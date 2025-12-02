@@ -8,18 +8,6 @@ cd prj/$prj_name
 
 # exit
 
-set ver 2025.1
-
-foreach item $argv {
-  puts "Input arfguments: $argv"
-  if {[lsearch -all $item "*DTS_VER*"] >= 0} {
-    set param [split $item "="]
-    if {[lindex $param 1] ne ""} {
-      set ver [lindex $param 1]
-    }
-  }
-}
-
 set path_sdk "sdk"
 set xsa_file $path_sdk/red_pitaya.xsa
 # Assumes you have an XSA file, not sysdef
@@ -53,7 +41,6 @@ domain create -name $domain_name -os standalone -proc $proc_name
 
 platform generate
 
-createdts -hw $xsa_file  -git-branch xlnx_rel_v$ver -overlay -out $fsbl_dts_dir
 # app create -name fsbl -platform $platform_name -domain standalone_domain -template "Empty Application(C)"
 # app build -name fsbl
 

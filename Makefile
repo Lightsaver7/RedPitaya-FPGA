@@ -21,11 +21,15 @@ MEMTEST_ELF = prj/$(PRJ)/sdk/dram_test/executable.elf
 DEVICE_TREE = prj/$(PRJ)/sdk/dts/system.dts
 XSA 		= prj/$(PRJ)/sdk/red_pitaya.xsa
 
+DEVICETREE_UB_PATH = prj/fsbl/sdk/dts
+DEVICETREE_UB =  prj/fsbl/out/devicetree_uboot.dtb
+DEVICETREE_UB_PATCH = prj/fsbl/dts
+
 VIVADO = vivado -nojournal -mode batch
 
 .PHONY: all project sim clean clean-all
 
-all: $(FPGA_BIN) $(DEVICE_TREE) $(DTREE_DIR)
+all: $(FPGA_BIN) $(DEVICE_TREE) $(DTREE_DIR) fsbl_dts
 
 clean-all:
 	@echo "Cleaning all projects in prj/: $(PROJECT_NAMES)"
@@ -74,7 +78,15 @@ $(DEVICE_TREE): $(XSA)
 
 dts: $(DEVICE_TREE)
 
+fsbl: fsbl_dts
 
-fsbl:
+fsbl_build:
 	$(VIVADO) -source red_pitaya_vivado_fsbl.tcl -tclargs MODEL=$(MODEL) RAM=$(RAM) DTS_VER=$(DTS_VER)
 	xsct red_pitaya_hsi_fsbl.tcl fsbl
+
+fsbl_dts: fsbl_build
+	echo $@
+	xsct red_pitaya_hsi_fsbl_dts.tcl fsbl
+	grep -qxF '/include/ "redpitaya.dtsi"' $(DEVICETREE_UB_PATH)/system-top.dts || echo '/include/ "redpitaya.dtsi"' >> $(DEVICETREE_UB_PATH)/system-top.dts;
+	gcc -E -nostdinc -undef -D__DTS__ -x assembler-with-cpp -o $(DEVICETREE_UB_PATH)/system-top.dts.tmp $(DEVICETREE_UB_PATH)/system-top.dts
+	dtc -@ -I dts -O dtb -i $(DEVICETREE_UB_PATCH) -o $(DEVICETREE_UB) $(DEVICETREE_UB_PATH)/system-top.dts.tmp

@@ -1,0 +1,8 @@
+/*
+ * System changes should be common to all FPGA images
+*/
+
+/include/ "ethernet.dtsi"
+/include/ "i2c0.dtsi"
+/include/ "usb0.dtsi"
+/include/ "qspi.dtsi"

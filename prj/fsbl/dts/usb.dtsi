@@ -1,0 +1,7 @@
+/*
+ * list devices on I2C bus
+ */
+
+&usb0 {
+    dr_mode = "host";
+};
