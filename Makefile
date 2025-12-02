@@ -29,7 +29,7 @@ VIVADO = vivado -nojournal -mode batch
 
 .PHONY: all project sim clean clean-all
 
-all: $(FPGA_BIN) $(DEVICE_TREE) $(DTREE_DIR) fsbl_dts
+all: $(FPGA_BIN) $(DEVICE_TREE) $(DTREE_DIR)
 
 clean-all:
 	@echo "Cleaning all projects in prj/: $(PROJECT_NAMES)"
