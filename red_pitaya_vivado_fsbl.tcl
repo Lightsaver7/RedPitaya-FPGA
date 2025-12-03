@@ -26,7 +26,6 @@ set prj_dir "build"
 
 cd prj/fsbl
 
-
 ################################################################################
 # install UltraFast Design Methodology from TCL Store
 ################################################################################
@@ -37,7 +36,6 @@ tclapp::install -quiet ultrafast
 # define paths
 ################################################################################
 
-set path_brd ../../brd
 set path_rtl rtl
 set path_ip  ip
 
@@ -46,13 +44,6 @@ set path_sdk sdk
 
 file mkdir $path_out
 file mkdir $path_sdk
-
-################################################################################
-# list board files
-################################################################################
-
-set_param board.repoPaths [list $path_brd]
-set_param iconstr.diffPairPulltype {opposite}
 
 ################################################################################
 # setup an in memory project
@@ -93,6 +84,12 @@ create_project -part $part -force redpitaya $prj_dir
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ10.tcl"
 # create PS BD
+
+set ::clk0_freq 125000000
+set ::clk1_freq 250000000
+set ::clk2_freq 50000000
+set ::clk3_freq 200000000
+
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
