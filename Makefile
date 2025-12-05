@@ -6,6 +6,7 @@
 
 PRJ   ?= v0.94
 MODEL ?= Z10
+FPGA_VERSION ?= z10_125
 RAM   ?= 512
 HWID  ?= ""
 DEFINES ?= ""
@@ -66,15 +67,49 @@ ifneq ($(HWID),"")
 else
 	$(VIVADO) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
 endif
-	./synCheck.sh
+	./synCheck.sh $(PRJ)
 
 $(XSA): $(FPGA_BIN)
 
 $(FSBL_ELF): $(XSA)
 	xsct red_pitaya_hsi_fsbl.tcl $(PRJ)
 
+ifeq ($(PRJ),barebones)
+    ifeq ($(FPGA_VERSION),z20_250_1_0)
+        DTS_PATH := dts_250
+    else ifeq ($(FPGA_VERSION),z20_250)
+        DTS_PATH := dts_250
+    else ifeq ($(FPGA_VERSION),z20_250a)
+        DTS_PATH := dts_250a
+    else
+        DTS_PATH := dts
+    endif
+endif
+
 $(DEVICE_TREE): $(XSA)
-	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER)
+	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER) MODEL=$(MODEL)
+
+ifeq ($(PRJ),barebones)
+	cp -rf prj/$(PRJ)/dts prj/$(PRJ)/sdk
+	cp -f prj/$(PRJ)/sdk/dts/system-top.dts prj/$(PRJ)/sdk/dts/system-top.dts.tmp
+	cat prj/$(PRJ)/sdk/dts/fpga.dts >> prj/$(PRJ)/sdk/dts/system-top.dts.tmp
+	gcc -I dts/$(DTS_PATH) -E -nostdinc -undef -D__DTS__ -x assembler-with-cpp -o prj/$(PRJ)/sdk/dts/system-top.dts.full.tmp prj/$(PRJ)/sdk/dts/system-top.dts.tmp
+	dtc -@ -I dts -O dtb -o prj/$(PRJ)/out/dts/dtraw.dtb -i dts/$(DTS_PATH) prj/$(PRJ)/sdk/dts/system-top.dts.full.tmp
+	dtc -I dtb -O dts --sort -o prj/$(PRJ)/out/dts/dtraw.dtbs prj/$(PRJ)/out/dts/dtraw.dtb
+	dtc dts/$(DTS_PATH)/led-system.dtso -I dts -O dtb -o prj/$(PRJ)/out/dts/led-system.dtbo
+endif
+
+	PL_PATH=prj/$(PRJ)/out/dts/out/dts/redpitaya_platform/ps7_cortexa9_0/device_tree_domain/bsp/pl.dtsi; \
+    echo "Path to pl.dtsi:  $$PL_PATH"; \
+	if [ -f "$$PL_PATH" ]; then \
+		sed -i 's/.bin/fpga.bin/g' $$PL_PATH; \
+		grep -qxF '/include/ "pl_patch.dtsi"' $$PL_PATH || echo '/include/ "pl_patch.dtsi"' >> $$PL_PATH; \
+		dtc -I dts -O dtb -i prj/$(PRJ)/dts -o prj/$(PRJ)/out/fpga.dtbo $$PL_PATH; \
+		dtc -I dtb -O dts --sort -o prj/$(PRJ)/out/fpga.dtso prj/$(PRJ)/out/fpga.dtbo; \
+    else \
+        echo "Missing pl.dtsi [SKIP]"; \
+    fi
+
 
 dts: $(DEVICE_TREE)
 

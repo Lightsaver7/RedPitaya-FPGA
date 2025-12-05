@@ -17,8 +17,8 @@ set output_dir2 out/dts2
 
 set ver 2025.1
 
+puts "Input arfguments: $argv"
 foreach item $argv {
-  puts "Input arfguments: $argv"
   if {[lsearch -all $item "*DTS_VER*"] >= 0} {
     set param [split $item "="]
     if {[lindex $param 1] ne ""} {
@@ -51,5 +51,7 @@ puts "Cur dir: [pwd]"
 
 
 createdts -hw $xsa_file -platform-name redpitaya_platform -git-branch xlnx_rel_v$ver -overlay -out $output_dir
+
+file copy -force $output_dir/out/dts/redpitaya_platform/ps7_cortexa9_0/device_tree_domain/bsp $path_sdk/dts
 
 puts "INFO: Device Tree generation complete."

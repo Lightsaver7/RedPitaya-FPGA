@@ -26,9 +26,10 @@ tclapp::install -quiet ultrafast
 ################################################################################
 
 set path_brd ../../brd
-set path_rtl rtl
+set path_rtl rtl/rtl
+set path_rtl_prj rtl
 set path_ip      ip
-set path_ip_top  ../../ip
+set path_ip_top  ../../ip/ip
 set path_bd  $prj_dir/redpitaya.gen/sources_1/bd/system/hdl
 set path_bd_src  $prj_dir/redpitaya.srcs/sources_1/bd/system
 set path_sdc ../../sdc
@@ -53,6 +54,8 @@ set_param iconstr.diffPairPulltype {opposite}
 
 set part xc7z010clg400-1
 set ::cpu_part xc7z010clg400-1
+set ::bus_w_bit "16 Bit"
+set ::dram_w_bit "16 Bits"
 
 create_project -part $part -force redpitaya $prj_dir
 
@@ -73,8 +76,8 @@ set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
-source $path_ip/system.tcl
 set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
+source $path_ip/system.tcl
 
 # generate SDK files
 generate_target all [get_files    system.bd]
@@ -89,15 +92,15 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 # 3. constraints
 ################################################################################
 
-add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
-add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
+# add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
+# add_files -quiet                  [glob -nocomplain       $path_rtl_prj/*_pkg.sv]
 
 if {$prj_name != "pyrpl"} {
-add_files                         ../../$path_rtl
-add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
+   add_files                         ../../$path_rtl
+   add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 }
 
-add_files                               $path_rtl
+add_files                               $path_rtl_prj
 add_files                               $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
@@ -113,7 +116,9 @@ if {[file isdirectory $path_ip_top/sync_fifo]} {
 source ${path_ip_top}/sync_fifo/sync_fifo.tcl
 }
 
-add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
+if {[file exists $path_sdc_prj/red_pitaya.xdc]} {
+   add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
+}
 
 ################################################################################
 # ser parameter containing Git hash
@@ -166,11 +171,6 @@ write_bitstream -force -bin_file  $path_out/red_pitaya
 ################################################################################
 # generate system definition
 ################################################################################
-
-
-# write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
-#                          -bitfile $path_out/red_pitaya.bit \
-#                          -file    $path_sdk/red_pitaya.sysdef
 
 
 set_property platform.default_output_type "sd_card" [current_project]

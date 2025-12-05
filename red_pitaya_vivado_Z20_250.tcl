@@ -2,12 +2,12 @@
 # Vivado tcl script for building RedPitaya FPGA in non project mode
 #
 # Usage:
-# vivado -mode tcl -source red_pitaya_vivado_Z20.tcl -tclargs projectname
+# vivado -mode tcl -source red_pitaya_vivado_Z20_250.tcl -tclargs projectname
 ################################################################################
 
 set prj_name [lindex $argv 0]
 set prj_defs [lindex $argv 1]
-set prj_top "red_pitaya_top"
+set prj_top "red_pitaya_top_250"
 set prj_dir "build"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
@@ -25,14 +25,15 @@ tclapp::install -quiet ultrafast
 # define paths
 ################################################################################
 
-set path_brd brd
-set path_rtl rtl_250
+set path_brd ../../brd
+set path_rtl rtl/rtl_250
+set path_rtl_prj rtl
 set path_ip      ip
-set path_ip_top  ../../ip_250
-set path_sdc sdc_250
+set path_ip_top  ../../ip/ip_250
+set path_bd  $prj_dir/redpitaya.gen/sources_1/bd/system/hdl
+set path_bd_src  $prj_dir/redpitaya.srcs/sources_1/bd/system
+set path_sdc ../../sdc
 set path_sdc_prj sdc
-set path_bd  .gen/sources_1/bd/system/hdl
-
 set path_out out
 set path_sdk sdk
 
@@ -51,6 +52,9 @@ set_param iconstr.diffPairPulltype {opposite}
 ################################################################################
 
 set part xc7z020clg400-3
+set ::cpu_part xc7z020clg400-3
+set ::bus_w_bit "16 Bit"
+set ::dram_w_bit "16 Bits"
 
 create_project -part $part -force redpitaya $prj_dir
 
@@ -60,16 +64,24 @@ create_project -part $part -force redpitaya $prj_dir
 
 # file was created from GUI using "write_bd_tcl -force ip/systemZ20.tcl"
 # create PS BD
+set ::gpio_width 24
+
+set ::clk0_freq 125000000
+set ::clk1_freq 250000000
+set ::clk2_freq 50000000
+set ::clk3_freq 200000000
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 125000000
 set ::hp3_clk_freq 125000000
 
-source                            $path_ip/systemZ20.tcl
 set_property verilog_define [concat Z20_250 $prj_defs] [current_fileset]
+source $path_ip/system.tcl
 
 # generate SDK files
 generate_target all [get_files    system.bd]
+make_wrapper -files [get_files *.bd] -top
+
 write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 
 ################################################################################
@@ -81,8 +93,9 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 
 #add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
 #add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
+
 add_files                         ../../$path_rtl
-add_files                         $path_rtl
+add_files                         $path_rtl_prj
 add_files                         $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
@@ -98,7 +111,7 @@ if {[file isdirectory $path_ip_top/sync_fifo]} {
 source ${path_ip_top}/sync_fifo/sync_fifo.tcl
 }
 
-add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
+# add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
 ## search for HWID parameter to select xdc
 foreach item $argv {
@@ -114,12 +127,15 @@ foreach item $argv {
 
 if {[info exists board]} {
   puts "Special board: $board"
-  add_files -fileset constrs_1  ../../$path_sdc/red_pitaya_${board}.xdc
+  add_files -fileset constrs_1  $path_sdc/red_pitaya_z20_250_${board}.xdc
 } else {
   puts "Reading standard board constraints."
-  add_files -fileset constrs_1  ../../$path_sdc/red_pitaya.xdc
+  add_files -fileset constrs_1  $path_sdc/red_pitaya_z20_250.xdc
 }
 
+if {[file exists $path_sdc_prj/red_pitaya_z20_250.xdc]} {
+   add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_z20_250.xdc
+}
 
 
 ################################################################################
@@ -128,11 +144,7 @@ if {[info exists board]} {
 
 set gith [exec git log -1 --format="%H"]
 set_property generic "GITH=160'h$gith" [current_fileset]
-
 set_property top $prj_top [current_fileset]
-
-
-
 
 ################################################################################
 # run synthesis
@@ -148,36 +160,29 @@ wait_on_run synth_1
 set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
 file copy -force $rptFiles ./$path_out/
 
-set_property platform.board_id "redpitaya" [current_project]
-set_property platform.name "redpitaya_platform" [current_project]
-write_hw_platform -force          $path_sdk/red_pitaya.xsa
-
 ################################################################################
-# run placement and router
+# run placement and logic optimization
 # report utilization and timing estimates
 # write checkpoint design
 ################################################################################
 
-
-launch_runs impl_1 -jobs 2
+launch_runs impl_1
 wait_on_run impl_1
 
 set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]
 foreach file $rptFiles {
    file copy -force $file ./$path_out/
 }
-
-
 ################################################################################
 # generate a bitstream
 ################################################################################
 
-#set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
-
-launch_runs impl_1 -to_step write_bitstream
+#launch_runs impl_1 -to_step write_bitstream
+#wait_on_run impl_1
 
 open_run impl_1
-write_bitstream -force            $path_out/red_pitaya.bit
+set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
+write_bitstream -force            $path_out/red_pitaya
 write_bitstream -force -bin_file  $path_out/red_pitaya
 
 
@@ -186,8 +191,14 @@ write_bitstream -force -bin_file  $path_out/red_pitaya
 ################################################################################
 
 
-write_sysdef -force      -hwdef   $path_sdk/red_pitaya.hwdef \
-                         -bitfile $path_out/red_pitaya.bit \
-                         -file    $path_sdk/red_pitaya.sysdef
+set_property platform.default_output_type "sd_card" [current_project]
+set_property platform.board_id "redpitaya" [current_project]
+set_property platform.name "redpitaya_platform" [current_project]
+set_property platform.design_intent.embedded true [current_project]
+set_property platform.design_intent.external_host false [current_project]
+set_property platform.design_intent.datacenter false [current_project]
+set_property platform.design_intent.server_managed false [current_project]
+
+write_hw_platform -force -file $path_sdk/red_pitaya.xsa
 
 exit

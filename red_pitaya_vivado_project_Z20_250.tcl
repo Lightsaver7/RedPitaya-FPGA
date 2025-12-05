@@ -18,7 +18,7 @@ cd prj/$prj_name
 ################################################################################
 
 set path_brd brd
-set path_rtl rtl_250
+set path_rtl rtl/rtl_250
 set path_ip      ip
 set path_ip_top  ../../ip_250
 set path_sdc sdc_250
@@ -67,7 +67,7 @@ generate_target all [get_files    system.bd]
 ################################################################################
 
 add_files                         ../../$path_rtl
-add_files                         $path_rtl
+add_files                         rtl
 add_files                         $path_bd
 add_files -fileset constrs_1      $path_sdc_prj/red_pitaya.xdc
 
