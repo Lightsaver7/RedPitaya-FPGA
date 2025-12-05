@@ -52,14 +52,10 @@ set_property PACKAGE_PIN V15 [get_ports {adc_dat_p_i[1][6]}] ; # ADB10P
 set_property PACKAGE_PIN W15 [get_ports {adc_dat_n_i[1][6]}] ; # ADB10N
 
 
-#set_property IOSTANDARD DIFF_SSTL18_II [get_ports {adc_clk_i[*]}]
+set_property IOSTANDARD DIFF_SSTL18_II [get_ports {adc_clk_i[*]}]
 #set_property DIFF_TERM TRUE [get_ports {adc_clk_i[*]}]
-
-set_property IOSTANDARD LVCMOS18 [get_ports {adc_clk_i[0]}]
-#set_property IOSTANDARD LVCMOS18 [get_ports {adc_clk_i[1]}]
-
-set_property PACKAGE_PIN U18 [get_ports {adc_clk_i[0]}] ; # ADCLKP
-#set_property PACKAGE_PIN U19 [get_ports {adc_clk_i[1]}] ; # ADCLKN
+set_property PACKAGE_PIN U19 [get_ports {adc_clk_i[0]}] ; # ADCLKN
+set_property PACKAGE_PIN U18 [get_ports {adc_clk_i[1]}] ; # ADCLKP
 
 # ADC SPI
 set_property IOSTANDARD LVCMOS18 [get_ports adc_spi_*]
