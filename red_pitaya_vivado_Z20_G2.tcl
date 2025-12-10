@@ -15,6 +15,12 @@ puts "Defines: $prj_defs"
 cd prj/$prj_name
 #cd prj/$::argv 0
 
+set dev_mode 0
+foreach item $argv {
+  if {[lsearch -all $item "*DEV_MODE*"] >= 0} {
+    set dev_mode 1
+  }
+}
 
 ################################################################################
 # install UltraFast Design Methodology from TCL Store
@@ -81,6 +87,10 @@ if {$prj_name == "stream_app"} {
    set ::stream_app_rtl $path_rtl_prj/rtl
    set ::stream_app_adc_count 2
    set ::stream_app_adc_bits 14
+}
+
+if {$prj_name == "logic"} {
+   set ::logic_freq 125000000
 }
 
 set_property verilog_define [concat Z20_G2 Z20_xx $prj_defs] [current_fileset]
@@ -151,6 +161,8 @@ set_property top $prj_top [current_fileset]
 ################################################################################
 
 update_compile_order -fileset sources_1
+
+if {$dev_mode == 1} {return}
 
 launch_runs synth_1
 wait_on_run synth_1

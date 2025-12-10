@@ -5,7 +5,7 @@
 // (c) Red Pitaya  http://www.redpitaya.com
 ////////////////////////////////////////////////////////////////////////////////
 
-module red_pitaya_top #(
+module red_pitaya_top_250 #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
@@ -243,7 +243,7 @@ assign led_o = led_hk;
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
-red_pitaya_ps ps (
+red_pitaya_ps_250 ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
   .FIXED_IO_ps_porb   (  FIXED_IO_ps_porb            ),
@@ -681,9 +681,9 @@ endgenerate
 generate
 for(GV = 0 ; GV < 14 ; GV = GV +2)
 begin:adc_iddr
-   IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) 
+   IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED"))
      i_ddr0 (.Q1(adc_dat_in[0][GV]), .Q2(adc_dat_in[0][GV+1]), .C(adc_clk), .CE(1'b1), .D(adc_dat_idly[0][GV/2]), .R(1'b0), .S(1'b0) );
-   IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED")) 
+   IDDR #(.DDR_CLK_EDGE("SAME_EDGE_PIPELINED"))
      i_ddr1 (.Q1(adc_dat_in[1][GV]), .Q2(adc_dat_in[1][GV+1]), .C(adc_clk), .CE(1'b1), .D(adc_dat_idly[1][GV/2]), .R(1'b0), .S(1'b0) );
 end
 endgenerate
@@ -921,4 +921,4 @@ axi4_stream_pas loopback (
   .sto (axi_drx[3])
 );
 
-endmodule: red_pitaya_top
+endmodule: red_pitaya_top_250

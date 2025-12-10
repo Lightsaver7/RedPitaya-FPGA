@@ -7,12 +7,12 @@
 /**
  * GENERAL DESCRIPTION:
  *
- * Wrapper of block design.  
+ * Wrapper of block design.
  *
  *                   /-------\
  *   PS CLK -------> |       | <---------------------> SPI master & slave
  *   PS RST -------> |  PS   |
- *                   |       | ------------+---------> FCLK & reset 
+ *                   |       | ------------+---------> FCLK & reset
  *                   |       |             |
  *   PS DDR <------> |  ARM  |   AXI   /-------\
  *   PS MIO <------> |       | <-----> |  AXI  | <---> system bus
@@ -21,11 +21,11 @@
  *
  * Module wrappes PS module (BD design from Vivado or EDK from PlanAhead).
  * There is also included simple AXI slave which serves as master for custom
- * system bus. With this simpler bus it is more easy for newbies to develop 
+ * system bus. With this simpler bus it is more easy for newbies to develop
  * their own module communication with ARM.
  */
 
-module red_pitaya_ps (
+module red_pitaya_ps_250 (
   // PS peripherals
   inout  logic [ 54-1:0] FIXED_IO_mio       ,
   inout  logic           FIXED_IO_ps_clk    ,

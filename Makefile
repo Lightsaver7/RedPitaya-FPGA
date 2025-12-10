@@ -56,9 +56,9 @@ sim:
 
 project:
 ifneq ($(HWID),"")
-	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID)
+	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) HWID=$(HWID) DEV_MODE
 else
-	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_project_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES)
+	vivado $(VIVADO_OPTS) -source red_pitaya_vivado_$(MODEL).tcl -tclargs $(PRJ) $(DEFINES) DEV_MODE
 endif
 
 $(FPGA_BIN):
