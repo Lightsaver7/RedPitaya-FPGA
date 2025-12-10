@@ -9,10 +9,10 @@ set prj_name [lindex $argv 0]
 set prj_defs [lindex $argv 1]
 set prj_top "red_pitaya_top"
 set prj_dir "build"
+set prj_board "z10"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
 cd prj/$prj_name
-#cd prj/$::argv 0
 
 
 ################################################################################
@@ -76,6 +76,12 @@ set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000
 set ::hp3_clk_freq 250000000
 
+if {$prj_name == "stream_app"} {
+   set ::stream_app_rtl $path_rtl_prj/rtl
+   set ::stream_app_adc_count 2
+   set ::stream_app_adc_bits 14
+}
+
 set_property verilog_define [concat Z10 $prj_defs] [current_fileset]
 source $path_ip/system.tcl
 
@@ -92,15 +98,13 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 # 3. constraints
 ################################################################################
 
-# add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
-# add_files -quiet                  [glob -nocomplain       $path_rtl_prj/*_pkg.sv]
 
 if {$prj_name != "pyrpl"} {
-   add_files                         ../../$path_rtl
+   add_files -fileset sources_1      ../../$path_rtl
    add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 }
 
-add_files                               $path_rtl_prj
+add_files  -fileset sources_1 -norecurse $path_rtl_prj
 add_files                               $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]

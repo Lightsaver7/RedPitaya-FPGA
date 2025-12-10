@@ -1,11 +1,3 @@
-set clk0_freq 125000000
-set clk1_freq 250000000
-set clk2_freq 50000000
-set clk3_freq 200000000
-set gpio_width 64
-set bus_w_bit 16
-set dram_w_bit 16
-
 proc configure_ps7 {ps_instance} {
     global clk0_freq clk1_freq clk2_freq clk3_freq
     global gpio_width bus_w_bit dram_w_bit

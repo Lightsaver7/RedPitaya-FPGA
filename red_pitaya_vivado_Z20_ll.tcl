@@ -9,6 +9,7 @@ set prj_name [lindex $argv 0]
 set prj_defs [lindex $argv 1]
 set prj_top "red_pitaya_top_ll"
 set prj_dir "build"
+set prj_board "z20_ll"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
 cd prj/$prj_name

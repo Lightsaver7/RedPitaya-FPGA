@@ -9,6 +9,7 @@ set prj_name [lindex $argv 0]
 set prj_defs [lindex $argv 1]
 set prj_top "red_pitaya_top_250"
 set prj_dir "build"
+set prj_board "z20_250"
 puts "Project name: $prj_name"
 puts "Defines: $prj_defs"
 cd prj/$prj_name
@@ -34,6 +35,7 @@ set path_bd  $prj_dir/redpitaya.gen/sources_1/bd/system/hdl
 set path_bd_src  $prj_dir/redpitaya.srcs/sources_1/bd/system
 set path_sdc ../../sdc
 set path_sdc_prj sdc
+
 set path_out out
 set path_sdk sdk
 
@@ -72,8 +74,14 @@ set ::clk2_freq 50000000
 set ::clk3_freq 200000000
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
-set ::hp2_clk_freq 125000000
-set ::hp3_clk_freq 125000000
+set ::hp2_clk_freq 250000000
+set ::hp3_clk_freq 250000000
+
+if {$prj_name == "stream_app"} {
+   set ::stream_app_rtl $path_rtl_prj/rtl_250
+   set ::stream_app_adc_count 2
+   set ::stream_app_adc_bits 16
+}
 
 set_property verilog_define [concat Z20_250 $prj_defs] [current_fileset]
 source $path_ip/system.tcl
@@ -91,16 +99,17 @@ write_hwdef -force       -file    $path_sdk/red_pitaya.hwdef
 # 3. constraints
 ################################################################################
 
-#add_files -quiet                  [glob -nocomplain ../../$path_rtl/*_pkg.sv]
-#add_files -quiet                  [glob -nocomplain       $path_rtl/*_pkg.sv]
 
-add_files                         ../../$path_rtl
-add_files                         $path_rtl_prj
-add_files                         $path_bd
+if {$prj_name != "pyrpl"} {
+   add_files -fileset sources_1      ../../$path_rtl
+}
+
+add_files  -fileset sources_1 -norecurse $path_rtl_prj
+add_files                               $path_bd
 
 set ip_files [glob -nocomplain $path_ip/*.xci]
 if {$ip_files != ""} {
-read_ip                         $ip_files
+add_files                         $ip_files
 }
 
 if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
@@ -136,7 +145,6 @@ if {[info exists board]} {
 if {[file exists $path_sdc_prj/red_pitaya_z20_250.xdc]} {
    add_files -fileset constrs_1      $path_sdc_prj/red_pitaya_z20_250.xdc
 }
-
 
 ################################################################################
 # ser parameter containing Git hash
