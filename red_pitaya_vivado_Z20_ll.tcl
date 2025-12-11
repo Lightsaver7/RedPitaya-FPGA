@@ -79,6 +79,7 @@ set ::clk1_freq 250000000
 set ::clk2_freq 50000000
 set ::clk3_freq 200000000
 
+set ::gp0_clk_freq 125000000
 set ::hp0_clk_freq 125000000
 set ::hp1_clk_freq 125000000
 set ::hp2_clk_freq 250000000

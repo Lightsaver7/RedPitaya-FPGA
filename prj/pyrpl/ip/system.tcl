@@ -17,6 +17,23 @@ proc get_script_folder {} {
 variable script_folder
 set script_folder [_tcl::get_script_folder]
 
+if {![info exists ::cpu_part]} {
+    error "Variable cpu_part not defined"
+}
+
+if {![info exists ::bus_w_bit]} {
+    error "Variable bus_w_bit not defined"
+}
+
+if {![info exists ::dram_w_bit]} {
+    error "Variable dram_w_bit not defined"
+}
+
+if {![info exists ::gpio_width]} {
+    error "Variable gpio_width not defined"
+}
+
+
 ################################################################
 # Check if script is running in correct Vivado version.
 ################################################################
@@ -220,7 +237,7 @@ proc create_root_design { parentCell } {
    CONFIG.HAS_REGION {1} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
-   CONFIG.ID_WIDTH {4} \
+   CONFIG.ID_WIDTH {6} \
    CONFIG.MAX_BURST_LENGTH {16} \
    CONFIG.NUM_READ_OUTSTANDING {1} \
    CONFIG.NUM_READ_THREADS {1} \
@@ -253,7 +270,7 @@ proc create_root_design { parentCell } {
    CONFIG.HAS_REGION {1} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
-   CONFIG.ID_WIDTH {4} \
+   CONFIG.ID_WIDTH {6} \
    CONFIG.MAX_BURST_LENGTH {16} \
    CONFIG.NUM_READ_OUTSTANDING {1} \
    CONFIG.NUM_READ_THREADS {1} \
@@ -286,7 +303,7 @@ proc create_root_design { parentCell } {
    CONFIG.HAS_REGION {0} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
-   CONFIG.ID_WIDTH {4} \
+   CONFIG.ID_WIDTH {6} \
    CONFIG.MAX_BURST_LENGTH {16} \
    CONFIG.NUM_READ_OUTSTANDING {1} \
    CONFIG.NUM_READ_THREADS {1} \
@@ -319,7 +336,7 @@ proc create_root_design { parentCell } {
    CONFIG.HAS_REGION {0} \
    CONFIG.HAS_RRESP {1} \
    CONFIG.HAS_WSTRB {1} \
-   CONFIG.ID_WIDTH {4} \
+   CONFIG.ID_WIDTH {6} \
    CONFIG.MAX_BURST_LENGTH {16} \
    CONFIG.NUM_READ_OUTSTANDING {1} \
    CONFIG.NUM_READ_THREADS {1} \
@@ -352,7 +369,6 @@ proc create_root_design { parentCell } {
   set FCLK_RESET3_N [ create_bd_port -dir O -type rst FCLK_RESET3_N ]
   set CAN0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:can_rtl:1.0 CAN0 ]
   set CAN1 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:can_rtl:1.0 CAN1 ]
-  set IIC_1_0 [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:iic_rtl:1.0 IIC_1_0 ]
   set M_AXI_GP0_ACLK [ create_bd_port -dir I -type clk -freq_hz $::gp0_clk_freq M_AXI_GP0_ACLK ]
   set_property -dict [ list \
    CONFIG.ASSOCIATED_BUSIF {M_AXI_GP0} \
@@ -366,14 +382,6 @@ proc create_root_design { parentCell } {
   set axi_protocol_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_protocol_converter:2.1 axi_protocol_converter_0 ]
 
   # Create instance: proc_sys_reset, and set properties
-  set proc_sys_reset_3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_3 ]
-  set_property -dict [ list \
-   CONFIG.C_EXT_RST_WIDTH {1} \
- ] $proc_sys_reset_3
-
-  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0 ]
-  set proc_sys_reset_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_1 ]
-  set proc_sys_reset_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_2 ]
 
   create_bd_cell -type ip -vlnv xilinx.com:ip:axi_register_slice:2.1 axi_register_slice_0
 
@@ -391,8 +399,27 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_CAN1_PERIPHERAL_ENABLE {1} \
    CONFIG.PCW_CAN_PERIPHERAL_DIVISOR0 {1} \
    CONFIG.PCW_CAN_PERIPHERAL_DIVISOR1 {1} \
+   CONFIG.PCW_S_AXI_HP0_ID_WIDTH {6} \
+   CONFIG.PCW_S_AXI_HP1_ID_WIDTH {6} \
+   CONFIG.PCW_S_AXI_HP2_ID_WIDTH {6} \
+   CONFIG.PCW_S_AXI_HP3_ID_WIDTH {6} \
   ] $processing_system7
 
+  # Create instance: proc_sys_reset_0, and set properties
+  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0 ]
+
+  # Create instance: proc_sys_reset_1, and set properties
+  set proc_sys_reset_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_1 ]
+
+  # Create instance: proc_sys_reset_2, and set properties
+  set proc_sys_reset_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_2 ]
+
+  # Create instance: proc_sys_reset_3, and set properties
+  set proc_sys_reset_3 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_3 ]
+
+  set_property -dict [ list \
+   CONFIG.C_EXT_RST_WIDTH {1} \
+ ] $proc_sys_reset_3
   # Create instance: xadc, and set properties
   set xadc [ create_bd_cell -type ip -vlnv xilinx.com:ip:xadc_wiz:3.3 xadc ]
   set_property -dict [ list \
@@ -409,11 +436,6 @@ proc create_root_design { parentCell } {
    CONFIG.SINGLE_CHANNEL_SELECTION {TEMPERATURE} \
    CONFIG.XADC_STARUP_SELECTION {independent_adc} \
  ] $xadc
-
-  set_property -dict [ list \
-   CONFIG.NUM_READ_OUTSTANDING {1} \
-   CONFIG.NUM_WRITE_OUTSTANDING {1} \
- ] [get_bd_intf_pins /xadc/s_axi_lite]
 
   # Create instance: xlconstant, and set properties
   set xlconstant [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant ]
@@ -438,9 +460,6 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net s_axi_hp3_1 [get_bd_intf_ports S_AXI_HP3] [get_bd_intf_pins processing_system7/S_AXI_HP3]
   connect_bd_intf_net [get_bd_intf_ports CAN0] [get_bd_intf_pins processing_system7/CAN_0]
   connect_bd_intf_net [get_bd_intf_ports CAN1] [get_bd_intf_pins processing_system7/CAN_1]
-
-  connect_bd_intf_net -intf_net processing_system7_IIC_1 [get_bd_intf_ports IIC_1_0] [get_bd_intf_pins processing_system7/IIC_1]
-
 
   # Create port connections
   connect_bd_net -net m_axi_gp0_aclk_1 [get_bd_ports M_AXI_GP0_ACLK] [get_bd_pins processing_system7/M_AXI_GP0_ACLK]
