@@ -35,7 +35,8 @@
  */
 
 module red_pitaya_asg_ch #(
-   parameter RSZ = 14
+   parameter RSZ = 14,
+   parameter int unsigned TRIG_IN_DLY = 128
 )(
    // DAC
    output reg [ 14-1: 0] dac_o           ,  //!< dac data output
@@ -82,10 +83,28 @@ module red_pitaya_asg_ch #(
    input     [  32-1: 0] set_axi_start_i ,  //!< AXI start address
    input     [  32-1: 0] set_axi_stop_i  ,  //!< AXI stop address
    input     [  32-1: 0] set_axi_dec_i   ,  //!< AXI decimation
-   output    [  16-1: 0] axi_state_o     ,  //!< AXI state
+   output    [  20-1: 0] axi_state_o     ,  //!< AXI state
    output    [  32-1: 0] err_cnt_o       ,  //!< number of missed samples
    output    [  32-1: 0] transf_cnt_o       //!< number of successful AXI transfers
 );
+
+reg [TRIG_IN_DLY-1:0] shift_trig_in;
+reg                   prefill;
+
+assign trig_in_delayed = shift_trig_in[TRIG_IN_DLY-1];
+
+always_ff @(posedge dac_clk_i) begin
+   if (!dac_rstn_i) begin
+      prefill <= 1'b0;
+   end else begin
+      if (set_rst_i)
+        prefill <= 1'b0;
+      else if (trig_in_delayed)
+        prefill <= 1'b0;
+      else if (trig_in)
+        prefill <= 1'b1;
+   end
+end
 
 //---------------------------------------------------------------------------------
 //
@@ -103,7 +122,6 @@ wire [14-1:0] lfsr_noise;
     .seed_i  (  set_seed_i ), // init value
     .dat_o   (  lfsr_noise )  // data output noise
   );
-
 
 localparam PNT_SIZE = RSZ+16+32;
 typedef enum logic [0:0] {
@@ -248,7 +266,7 @@ always_ff @(posedge dac_clk_i) begin
       if (set_rst_i) begin
           init_run   <= 1'b1;
           init_delay <= 1'b0;
-      end else if (trig_in || init_delay != 1'b0) begin
+      end else if (trig_in_delayed || init_delay != 1'b0) begin
           init_delay <= init_delay + 2'b1;
           set_last   <= set_last_i;
       end else if (rdly_mode == RDLY_MODE_COPY) begin
@@ -278,6 +296,7 @@ always @(posedge dac_clk_i) begin
       dac_trigr    <=  1'b0 ;
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
+      shift_trig_in <=  'h0 ;
    end
    else begin
       // make 1us tick
@@ -295,7 +314,7 @@ always @(posedge dac_clk_i) begin
       end
 
       // repetitions counter
-      if (trig_in && !do_read)
+      if (trig_in_delayed && !do_read)
          rep_cnt <= set_rnum_i;
       else if (!set_rgate_i && (|rep_cnt && dac_rep && (dac_trig && !dac_trigr)) && (set_rnum_i != 16'hffff)) // only substract at the end of a cycle; 16'hffff is infinite pulses
          rep_cnt <= rep_cnt - 16'h1 ;
@@ -320,7 +339,9 @@ always @(posedge dac_clk_i) begin
        default : trig_in <= 1'b0        ;
       endcase
 
-       if (trig_in) begin
+      shift_trig_in <= {shift_trig_in[TRIG_IN_DLY-2:0], trig_in};
+
+       if (trig_in_delayed) begin
           set_step <= set_step_i;
           set_step_lo <= set_step_lo_i;
        end
@@ -339,7 +360,7 @@ always @(posedge dac_clk_i) begin
    end
 end
 
-assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
+assign dac_trig = (!dac_rep && trig_in_delayed) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
 
 assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
@@ -358,7 +379,7 @@ end else begin
 end
 
 assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
-assign trig_done_o = !dac_rep && trig_in;
+assign trig_done_o = !dac_rep && trig_in_delayed;
 // output frequency on trigger
 assign get_step_o = set_step;
 assign get_step_lo_o = set_step_lo;
@@ -418,12 +439,13 @@ rp_asg_axi #(
   .dac_o           ( dac_axi_rd        ),
   .dac_clk_i       ( dac_clk_i         ),
   .dac_rstn_i      ( dac_rstn_i        ),
-  .trig_i          ( dac_trig          ),
+  .trig_i          ( trig_in           ), //!< Start AXI early to allow FIFO prefill before DAC consumes data
 
   .axi_sys         ( axi_sys           ),      
 
   .set_rst_i       ( set_rst_i         ),
   .set_axi_en_i    ( set_axi_en_i      ),
+  .prefill_i       ( prefill           ),
   .set_axi_start_i ( set_axi_start_i   ),
   .set_axi_stop_i  ( set_axi_stop_i    ),
   .set_axi_dec_i   ( set_axi_dec_i     ),

@@ -114,14 +114,17 @@ reg   [  32-1: 0] set_a_axi_stop , set_b_axi_stop     ;
 reg               set_a_axi_en   , set_b_axi_en       ;
 reg   [  32-1:0 ] set_a_axi_dec  , set_b_axi_dec      ;
 
-wire  [  16-1:0 ] axi_a_state    , axi_b_state        ;
+wire  [  20-1:0 ] axi_a_state    , axi_b_state        ;
 wire  [  32-1:0 ] axi_a_err      , axi_b_err          ;
 wire  [  32-1:0 ] axi_a_transf   , axi_b_transf       ;
 
 reg   [  32-1: 0] step_a_hi      , step_b_hi   ;
 reg   [  32-1: 0] step_a_lo      , step_b_lo   ;
 
-red_pitaya_asg_ch  #(.RSZ (RSZ)) chA 
+wire [8-1:0] axi_a_lvl = axi_a_state[20-1:12];
+wire [8-1:0] axi_b_lvl = axi_b_state[20-1:12];
+
+red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
 (
   // DAC
   .dac_o           (dac_a_o          ),  // dac data output
@@ -438,7 +441,7 @@ end else begin
      20'h00080 : begin sys_ack <= sys_en;          sys_rdata <= rand_a_en                          ; end
      20'h00084 : begin sys_ack <= sys_en;          sys_rdata <= rand_b_en                          ; end
 
-     20'h00100 : begin sys_ack <= sys_en;          sys_rdata <= {axi_b_state,axi_a_state}          ; end
+     20'h00100 : begin sys_ack <= sys_en;          sys_rdata <= {axi_b_state[16-1:0],axi_a_state[16-1:0]} ; end
      20'h00104 : begin sys_ack <= sys_en;          sys_rdata <= {{32-1{1'b0}},set_a_axi_en}        ; end
      20'h00108 : begin sys_ack <= sys_en;          sys_rdata <= set_a_axi_start                    ; end
      20'h0010C : begin sys_ack <= sys_en;          sys_rdata <= set_a_axi_stop                     ; end

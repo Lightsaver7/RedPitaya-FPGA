@@ -15,6 +15,7 @@ module rp_asg_axi #(
    input                  dac_rstn_i      ,  //!< dac reset - active low
    // trigger
    input                  trig_i          ,  //!< software trigger
+   input                  prefill_i       ,  //!< inhibit FIFO read until initial pipeline latency elapsed
    // buffer ctrl
    axi_sys_if.s           axi_sys         ,
 
@@ -26,7 +27,7 @@ module rp_asg_axi #(
    input      [  32-1: 0] set_axi_dec_i   ,  //!< AXI decimation
    input      [  16-1: 0] set_cyc_cnt_i   ,  //!< limit number of writes
    input      [  16-1: 0] cyc_cnt_i       ,  //!< cycle count for dac_do reset
-   output     [  16-1: 0] axi_state_o     ,  //!< AXI state
+   output     [  20-1: 0] axi_state_o     ,  //!< AXI state
    output                 axi_last_o      ,  //!< AXI final sample
 
    output reg [  32-1: 0] err_cnt_o       ,  //!< number of missed samples
@@ -314,7 +315,7 @@ always @(posedge dac_clk_i) begin // reading data from 64 bit FIFO
 end
 
 
-assign dat_fifo_rd  = dat_fifo_rden && !dat_fifo_empty && (&fifo_rd_rp && dec_val); // just before we read the next 4 samples
+assign dat_fifo_rd  = dat_fifo_rden && !dat_fifo_empty && (&fifo_rd_rp && dec_val) && !prefill_i; // just before we read the next 4 samples
 assign axi_last_o   = last_val && !last_val_r;
 
 always @(posedge dac_clk_i) begin // free running output decimation (holds sample for N clock cycles)
@@ -338,7 +339,7 @@ always @(posedge dac_clk_i) begin // free running read pointer (4 to 1 selector)
   end else begin
       fifo_rd_rp_r1 <= fifo_rd_rp;
       fifo_rd_rp_r2 <= fifo_rd_rp_r1;
-      if (dec_val) begin
+      if (dec_val && !prefill_i) begin
         if (&fifo_rd_rp) begin
           if (!dat_fifo_empty)
             fifo_rd_rp <= fifo_rd_rp + 1;
