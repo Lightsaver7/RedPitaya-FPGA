@@ -92,6 +92,8 @@ reg [TRIG_IN_DLY-1:0] shift_trig_in;
 reg                   prefill;
 
 assign trig_in_delayed = shift_trig_in[TRIG_IN_DLY-1];
+assign axi_en_latch = shift_trig_in[1];
+assign prefill_trig = shift_trig_in[8];
 
 always_ff @(posedge dac_clk_i) begin
    if (!dac_rstn_i) begin
@@ -101,7 +103,7 @@ always_ff @(posedge dac_clk_i) begin
         prefill <= 1'b0;
       else if (trig_in_delayed)
         prefill <= 1'b0;
-      else if (trig_in)
+      else if (prefill_trig)
         prefill <= 1'b1;
    end
 end
@@ -149,7 +151,7 @@ wire                  axi_last;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
-assign axi_dac_do = axi_state_o[1];
+assign axi_dac_do = axi_state_o[1] && axi_en && !(|shift_trig_in);
 assign axi_init   = axi_state_o[3];
 
 reg   [  16-1: 0] cyc_cnt   ;
@@ -238,12 +240,12 @@ wire             do_read_start;
 wire             do_read_end  ;
 wire             buf_cycle    ;
 
-assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
-assign do_read_start = set_axi_en_i ? axi_init    : dac_do;
+assign do_read       = axi_en ? axi_dac_do  : dac_do;
+assign do_read_start = axi_en ? axi_init    : dac_do;
 
-assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
+assign do_read_end   = axi_en ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
-assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+assign buf_cycle     = axi_en ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
 
 always_ff @(posedge dac_clk_i) begin
    if (dac_rstn_i == 1'b0) begin
@@ -297,6 +299,7 @@ always @(posedge dac_clk_i) begin
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
       shift_trig_in <=  'h0 ;
+      axi_en       <=   'b0 ;
    end
    else begin
       // make 1us tick
@@ -346,8 +349,13 @@ always @(posedge dac_clk_i) begin
           set_step_lo <= set_step_lo_i;
        end
 
+       if (set_rst_i)
+          axi_en <= 'b0;
+       else if (trig_in)
+          axi_en <= set_axi_en_i;
+
       // in cycle mode
-      if (dac_trig && !set_rst_i && !set_axi_en_i)
+      if (dac_trig && !set_rst_i && !axi_en)
          dac_do <= 1'b1 ;
       else if (set_rst_i || ((cyc_cnt==16'h1) && ~dac_npnt_sub_neg) )
          dac_do <= 1'b0 ;
@@ -439,12 +447,12 @@ rp_asg_axi #(
   .dac_o           ( dac_axi_rd        ),
   .dac_clk_i       ( dac_clk_i         ),
   .dac_rstn_i      ( dac_rstn_i        ),
-  .trig_i          ( trig_in           ), //!< Start AXI early to allow FIFO prefill before DAC consumes data
+  .trig_i          ( prefill_trig  ), //!< Start AXI early to allow FIFO prefill before DAC consumes data
 
   .axi_sys         ( axi_sys           ),      
 
-  .set_rst_i       ( set_rst_i         ),
-  .set_axi_en_i    ( set_axi_en_i      ),
+  .set_rst_i       ( set_rst_i ),
+  .set_axi_en_i    ( axi_en      ),
   .prefill_i       ( prefill           ),
   .set_axi_start_i ( set_axi_start_i   ),
   .set_axi_stop_i  ( set_axi_stop_i    ),
