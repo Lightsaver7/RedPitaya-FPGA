@@ -79,7 +79,7 @@ set_property DRIVE      8        [get_ports adc_cdcs_o]
 # data
 set_property IOSTANDARD LVCMOS33 [get_ports {dac_dat_o[*]}]
 set_property SLEW       SLOW     [get_ports {dac_dat_o[*]}]
-set_property DRIVE      4        [get_ports {dac_dat_o[*]}]
+set_property DRIVE      8        [get_ports {dac_dat_o[*]}]
 #set_property IOB        TRUE     [get_ports {dac_dat_o[*]}]
 
 set_property PACKAGE_PIN M19 [get_ports {dac_dat_o[0]}]
