@@ -8,7 +8,7 @@
 
 module top_tb #(
 
-  `define   rp_top        red_pitaya_top
+  `define   RP_TOP        red_pitaya_top
 
   `ifdef Z20_16
   parameter ADC_DW        = 16,
@@ -18,7 +18,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8138,
   realtime  TP            = 8.138ns,  // 122.88 MHz
-  `define   rp_top        red_pitaya_top_Z20
+  `define   RP_TOP        red_pitaya_top_Z20
   `endif
 
   `ifdef Z20_14
@@ -29,7 +29,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
-  `define   rp_top        red_pitaya_top
+  `define   RP_TOP        red_pitaya_top
   `endif
 
   `ifdef Z10_14
@@ -40,7 +40,7 @@ module top_tb #(
   parameter DWE           = 8,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
-  `define   rp_top        red_pitaya_top
+  `define   RP_TOP        red_pitaya_top
   `endif
 
   `ifdef Z20_4ADC
@@ -51,7 +51,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
-  `define   rp_top        red_pitaya_top_4ADC
+  `define   RP_TOP        red_pitaya_top_4ADC
   `endif
 
   `ifdef Z20_250
@@ -62,7 +62,7 @@ module top_tb #(
   parameter DWE           = 9,
   parameter CLKA_PER      = 4000,
   realtime  TP            = 4.0ns,  // 250 MHz
-  `define   rp_top        red_pitaya_top
+  `define   RP_TOP        red_pitaya_top
   `endif
 
   `ifdef Z20_G2
@@ -73,7 +73,7 @@ module top_tb #(
   parameter DWE           = 11,
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
-  `define   rp_top        red_pitaya_top
+  `define   RP_TOP        red_pitaya_top
   `endif
 
   `ifdef Z20_LL
@@ -85,7 +85,7 @@ module top_tb #(
   parameter CLKA_PER      = 8000,
   realtime  TP            = 8.0ns,  // 125 MHz
   realtime  ADC_TP        = 16.0ns, // 65 MHz
-  `define   rp_top        red_pitaya_top
+  `define   RP_TOP        red_pitaya_top
   `endif
 
   parameter N_SAMP        = 131072-1, // size of ADC buffer file
@@ -587,9 +587,8 @@ end
 // module instances
 ////////////////////////////////////////////////////////////////////////////////
 
-//`rp_top
-red_pitaya_top_4ADC
- #() red_pitaya_top
+`RP_TOP #() 
+red_pitaya_top
 (
   .daisy_p_o    ({d_clko_p,d_trigo_p}),
   .daisy_n_o    ({d_clko_n,d_trigo_n}),
@@ -635,7 +634,7 @@ red_pitaya_top_4ADC
   .dac_datb_o  (dac_dat[0]),  // DAC data chb
   .dac_wrta_o  (dac_wrt[1]),  // DAC write cha
   .dac_wrtb_o  (dac_wrt[0]),  // DAC write chab
-  `elsif        
+  `else        
   .dac_dat_o    (dac_dat[0]),
   .dac_wrt_o    (dac_wrt),
   .dac_sel_o    (dac_sel),
