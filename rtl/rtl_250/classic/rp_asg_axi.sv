@@ -127,7 +127,6 @@ logic             fifo_rst;
 
 
 localparam AXI_BURST_LEN    = 16;
-localparam FIFO_RESERVE     = AXI_BURST_LEN*15;
 
 localparam AXI_BURST_BYTES  = AXI_BURST_LEN*DW/8;
 localparam NUM_SAMPS        = DW/16;

@@ -11,12 +11,8 @@ Request and data FIFOs must be external.
 module axi_rd_burst #(
   parameter   DW  =  64          , // data width (8,16,...,1024)
   parameter   DWB =  DW/8        , // data width in bytes
-  parameter   DWW =  $clog2(DWB),
   parameter   AW  =  32          , // address width
-  parameter   LW  =   8          , // length width
-  parameter   BYTE_SEL = 0       ,
-  parameter   FW  = 4       , // address width of FIFO pointers
-  parameter   SW  = DW >> 3        // strobe width - 1 bit for every data byte
+  parameter   LW  =   8           // length width
 )
 (
    // AXI master signals
@@ -36,9 +32,6 @@ module axi_rd_burst #(
    output reg  [ AW-1: 0] rd_addr_o          , // read data @axi_clk
    output reg             rd_dval_o          , // read data valid @axi_clk
    input                  rd_drdy_i          , // read data ready @axi_clk
-
-   output      [ 32-1: 0] diags_o          , // read data @axi_clk
-
 
    output reg             ctrl_busy_o        , // status @axi_clk
    output reg             stat_busy_o          // status @cfg_clk

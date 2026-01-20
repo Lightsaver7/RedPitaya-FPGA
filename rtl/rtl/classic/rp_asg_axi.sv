@@ -318,6 +318,10 @@ end
 assign dat_fifo_rd  = dat_fifo_rden && !dat_fifo_empty && (&fifo_rd_rp && dec_val) && !prefill_i; // just before we read the next 4 samples
 assign axi_last_o   = last_val && !last_val_r;
 
+//---------------------------------------------------------------------------------
+//
+//  decimation timer
+
 always @(posedge dac_clk_i) begin // free running output decimation (holds sample for N clock cycles)
   if (dac_rstn_i == 1'b0) begin
     dec_cnt <=  16'h0 ;
@@ -332,6 +336,10 @@ always @(posedge dac_clk_i) begin // free running output decimation (holds sampl
 end
 
 assign dec_val = dec_cnt == set_axi_dec_i;
+
+//---------------------------------------------------------------------------------
+//
+// data decoding
 
 always @(posedge dac_clk_i) begin // free running read pointer (4 to 1 selector)
   if (dac_rstn_i == 1'b0) begin
@@ -359,50 +367,6 @@ for (GV = 0; GV < NUM_SAMPS; GV = GV + 1) begin : read_decoder
   end
 end
 endgenerate
-
-
-
-
-
-//---------------------------------------------------------------------------------
-//
-//  diagnostic logic
-
-logic [32-1: 0] sec_cnt;
-logic [32-1: 0] err_cnt;
-logic [32-1: 0] transf_cnt;
-
-
-always @(posedge dac_clk_i) begin
-  if (dac_rstn_i == 1'b0) begin
-    sec_cnt      <= 32'h0;
-    err_cnt      <= 32'h0;
-    transf_cnt   <= 32'h0;
-    err_cnt_o    <= 32'h0;
-    transf_cnt_o <= 32'h0;
-  end else begin
-    if (sec_cnt  >= 32'd125000000)
-      sec_cnt <= 32'h0;
-    else
-      sec_cnt <= sec_cnt + 1;
-
-    if (sec_cnt == 32'd125000000) begin
-      err_cnt_o    <= err_cnt;
-      transf_cnt_o <= transf_cnt;
-      transf_cnt   <= 32'h0;
-      err_cnt      <= 32'h0;
-    end else begin
-      if (dat_fifo_rden && (&fifo_rd_rp && dec_val)) begin
-        if (dat_fifo_empty)
-          err_cnt      <= err_cnt    + 1; // how many errors per second
-        else
-          transf_cnt   <= transf_cnt + 1; // how many successfull transfers per second
-      end
-    end
-  end
-end
-
-
 
 //---------------------------------------------------------------------------------
 //
