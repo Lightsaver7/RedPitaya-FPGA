@@ -35,8 +35,7 @@
  */
 
 module red_pitaya_asg_ch #(
-   parameter RSZ = 14,
-   parameter int unsigned TRIG_IN_DLY = 128
+   parameter RSZ = 14
 )(
    // DAC
    output reg [ 14-1: 0] dac_o           ,  //!< dac data output
@@ -83,30 +82,32 @@ module red_pitaya_asg_ch #(
    input     [  32-1: 0] set_axi_start_i ,  //!< AXI start address
    input     [  32-1: 0] set_axi_stop_i  ,  //!< AXI stop address
    input     [  32-1: 0] set_axi_dec_i   ,  //!< AXI decimation
-   output    [  20-1: 0] axi_state_o     ,  //!< AXI state
-   output    [  32-1: 0] err_cnt_o       ,  //!< number of missed samples
-   output    [  32-1: 0] transf_cnt_o       //!< number of successful AXI transfers
+   output    [  20-1: 0] axi_state_o        //!< AXI state
 );
 
-reg [TRIG_IN_DLY-1:0] shift_trig_in;
-reg                   prefill;
+// ila_2 ash_ch_dut (
+// 	.clk(dac_clk_i), // input wire clk
 
-assign trig_in_delayed = shift_trig_in[TRIG_IN_DLY-1];
-assign axi_en_latch = shift_trig_in[1];
-assign prefill_trig = shift_trig_in[8];
 
-always_ff @(posedge dac_clk_i) begin
-   if (!dac_rstn_i) begin
-      prefill <= 1'b0;
-   end else begin
-      if (set_rst_i)
-        prefill <= 1'b0;
-      else if (trig_in_delayed)
-        prefill <= 1'b0;
-      else if (prefill_trig)
-        prefill <= 1'b1;
-   end
-end
+// 	.probe0(trig_in), // input wire [0:0]  probe0  
+// 	.probe1(prefill), // input wire [0:0]  probe1 
+// 	.probe2(trig_in), // input wire [0:0]  probe2 
+// 	.probe3(trig_ext_i), // input wire [0:0]  probe3
+// 	.probe4(trig_sw_i), // input wire [0:0]  probe4
+// 	.probe5(trig_src_i), // input wire [2:0]  probe5
+// 	.probe6(set_rst_i), // input wire [0:0]  probe6
+// 	.probe7(do_read), // input wire [0:0]  probe7
+// 	.probe8(dac_trig), // input wire [0:0]  probe8
+// 	.probe9(set_axi_en_i), // input wire [0:0]  probe9
+// 	.probe10(axi_dac_do), // input wire [0:0]  probe10
+// 	.probe11(dac_o), // input wire [14-1:0]  probe11
+// 	.probe12(out_sel), // input wire [5-1:0]  probe12
+//   .probe13(rep_cnt), // [15:0]
+//   .probe14(cyc_cnt), // [15:0]
+//   .probe15(axi_last), // [0:0]
+//   .probe16(set_rdly_i) // [32:0]
+// );
+
 
 //---------------------------------------------------------------------------------
 //
@@ -151,7 +152,7 @@ wire                  axi_last;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
-assign axi_dac_do = axi_state_o[1] && axi_en && !(|shift_trig_in);
+assign axi_dac_do = axi_state_o[1];
 assign axi_init   = axi_state_o[3];
 
 reg   [  16-1: 0] cyc_cnt   ;
@@ -192,10 +193,17 @@ end
 
 always @(posedge dac_clk_i) // shift regs are needed because of processing path delay
 begin
-   dac_do_sr     <= {dac_do_sr[3:0] , dac_do     };
-   axi_dac_do_sr <= {axi_dac_do_sr[3:0], axi_dac_do };
-   lastval_sr    <= {lastval_sr[3:0], ~do_read    };
-   zero_sr       <= {zero_sr[3:0]   , set_zero_i };
+   if (!dac_rstn_i || set_rst_i) begin
+      dac_do_sr     <= 5'b0;
+      axi_dac_do_sr <= 5'b0;
+      lastval_sr    <= 5'b0;
+      zero_sr       <= 5'b0;
+   end else begin
+      dac_do_sr     <= {dac_do_sr[3:0] , dac_do     };
+      axi_dac_do_sr <= {axi_dac_do_sr[3:0], axi_dac_do };
+      lastval_sr    <= {lastval_sr[3:0], ~do_read    };
+      zero_sr       <= {zero_sr[3:0]   , set_zero_i };
+   end
 end
 
 // write
@@ -240,12 +248,12 @@ wire             do_read_start;
 wire             do_read_end  ;
 wire             buf_cycle    ;
 
-assign do_read       = axi_en ? axi_dac_do  : dac_do;
-assign do_read_start = axi_en ? axi_init    : dac_do;
+assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
+assign do_read_start = set_axi_en_i ? axi_init    : dac_do;
 
-assign do_read_end   = axi_en ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
+assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
-assign buf_cycle     = axi_en ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
 
 always_ff @(posedge dac_clk_i) begin
    if (dac_rstn_i == 1'b0) begin
@@ -268,7 +276,7 @@ always_ff @(posedge dac_clk_i) begin
       if (set_rst_i) begin
           init_run   <= 1'b1;
           init_delay <= 1'b0;
-      end else if (trig_in_delayed || init_delay != 1'b0) begin
+      end else if (trig_in || init_delay != 1'b0) begin
           init_delay <= init_delay + 2'b1;
           set_last   <= set_last_i;
       end else if (rdly_mode == RDLY_MODE_COPY) begin
@@ -298,8 +306,6 @@ always @(posedge dac_clk_i) begin
       dac_trigr    <=  1'b0 ;
       set_step     <= 32'h0 ; 
       set_step_lo  <= 32'h0 ;
-      shift_trig_in <=  'h0 ;
-      axi_en       <=   'b0 ;
    end
    else begin
       // make 1us tick
@@ -310,14 +316,14 @@ always @(posedge dac_clk_i) begin
 
       // delay between repetitions 
       if (set_rst_i || do_read_start)
-         dly_cnt <= set_rdly_i ;
+         dly_cnt <= set_rdly_i;
       else if (|dly_cnt && (dly_tick == 8'd124)) begin// last value counter takes precedent
          if(dly_cnt > 'h1 || (dly_cnt == 'h1))
             dly_cnt <= dly_cnt - 32'h1 ;
       end
 
       // repetitions counter
-      if (trig_in_delayed && !do_read)
+      if (trig_in && !do_read)
          rep_cnt <= set_rnum_i;
       else if (!set_rgate_i && (|rep_cnt && dac_rep && (dac_trig && !dac_trigr)) && (set_rnum_i != 16'hffff)) // only substract at the end of a cycle; 16'hffff is infinite pulses
          rep_cnt <= rep_cnt - 16'h1 ;
@@ -342,20 +348,13 @@ always @(posedge dac_clk_i) begin
        default : trig_in <= 1'b0        ;
       endcase
 
-      shift_trig_in <= {shift_trig_in[TRIG_IN_DLY-2:0], trig_in};
-
-       if (trig_in_delayed) begin
-          set_step <= set_step_i;
-          set_step_lo <= set_step_lo_i;
-       end
-
-       if (set_rst_i)
-          axi_en <= 'b0;
-       else if (trig_in)
-          axi_en <= set_axi_en_i;
+      if (trig_in) begin
+        set_step <= set_step_i;
+        set_step_lo <= set_step_lo_i;
+      end
 
       // in cycle mode
-      if (dac_trig && !set_rst_i && !axi_en)
+      if (dac_trig && !set_rst_i && !set_axi_en_i)
          dac_do <= 1'b1 ;
       else if (set_rst_i || ((cyc_cnt==16'h1) && ~dac_npnt_sub_neg) )
          dac_do <= 1'b0 ;
@@ -368,7 +367,7 @@ always @(posedge dac_clk_i) begin
    end
 end
 
-assign dac_trig = (!dac_rep && trig_in_delayed) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
+assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
 
 assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
@@ -387,7 +386,7 @@ end else begin
 end
 
 assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
-assign trig_done_o = !dac_rep && trig_in_delayed;
+assign trig_done_o = !dac_rep && trig_in;
 // output frequency on trigger
 assign get_step_o = set_step;
 assign get_step_lo_o = set_step_lo;
@@ -447,21 +446,17 @@ rp_asg_axi #(
   .dac_o           ( dac_axi_rd        ),
   .dac_clk_i       ( dac_clk_i         ),
   .dac_rstn_i      ( dac_rstn_i        ),
-  .trig_i          ( prefill_trig  ), //!< Start AXI early to allow FIFO prefill before DAC consumes data
+  .trig_i          ( dac_trig          ),
 
   .axi_sys         ( axi_sys           ),      
 
   .set_rst_i       ( set_rst_i ),
-  .set_axi_en_i    ( axi_en      ),
-  .prefill_i       ( prefill           ),
+  .set_axi_en_i    ( set_axi_en_i      ),
   .set_axi_start_i ( set_axi_start_i   ),
   .set_axi_stop_i  ( set_axi_stop_i    ),
   .set_axi_dec_i   ( set_axi_dec_i     ),
   .set_cyc_cnt_i   ( set_ncyc_i        ),
-  .cyc_cnt_i       ( cyc_cnt           ),
   .axi_state_o     ( axi_state_o       ),
-  .axi_last_o      ( axi_last          ),
-  .err_cnt_o       ( err_cnt_o         ),
-  .transf_cnt_o    ( transf_cnt_o      )
+  .axi_last_o      ( axi_last          )
 );
 endmodule

@@ -15,14 +15,14 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 ##################################################################
 
 # To test this script, run the following commands from Vivado Tcl console:
-# source asg_dat_fifo_from_xci.tcl
+# source asg_dat_fifo_recreate.tcl
 # If there is no project opened, this script will create a
 # project, but make sure you do not have an existing project
 # in the current working folder.
 
 set list_projs [get_projects -quiet]
 if { $list_projs eq "" } {
-  create_project redpitaya project -part xc7z010clg400-1
+  create_project redpitaya build -part xc7z010clg400-1
   set_property target_language Verilog [current_project]
   set_property simulator_language Mixed [current_project]
 }
@@ -64,18 +64,21 @@ set asg_dat_fifo [create_ip -name fifo_generator -vendor xilinx.com -library ip 
 
 # User Parameters
 set_property -dict [list \
+  CONFIG.Almost_Full_Flag {false} \
   CONFIG.Enable_Safety_Circuit {true} \
   CONFIG.FIFO_Implementation_rach {Common_Clock_Distributed_RAM} \
   CONFIG.FIFO_Implementation_wach {Common_Clock_Distributed_RAM} \
   CONFIG.FIFO_Implementation_wrch {Common_Clock_Distributed_RAM} \
   CONFIG.Fifo_Implementation {Independent_Clocks_Block_RAM} \
   CONFIG.Full_Flags_Reset_Value {1} \
-  CONFIG.Input_Data_Width {96} \
-  CONFIG.Input_Depth {256} \
-  CONFIG.Output_Data_Width {96} \
+  CONFIG.Input_Data_Width {64} \
+  CONFIG.Input_Depth {128} \
+  CONFIG.Output_Data_Width {64} \
   CONFIG.Read_Data_Count {true} \
-  CONFIG.Read_Data_Count_Width {8} \
+  CONFIG.Read_Data_Count_Width {7} \
   CONFIG.Use_Embedded_Registers {true} \
+  CONFIG.Valid_Flag {true} \
+  CONFIG.Write_Data_Count {true} \
 ] [get_ips asg_dat_fifo]
 
 # Runtime Parameters
