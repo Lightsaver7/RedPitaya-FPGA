@@ -343,7 +343,12 @@ always @(posedge dac_clk_i) begin
    end
 end
 
-assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
+wire rep_arm   = dac_rep && |rep_cnt && (dly_cnt == 32'h0);
+wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
+wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
+wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
+
+assign dac_trig = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end)) ;
 
 assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
