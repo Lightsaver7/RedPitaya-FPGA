@@ -447,22 +447,4 @@ rp_asg_axi #(
   .axi_last_pre_o  ( axi_last_pre      )
 );
 
-ila_1 your_instance_name (
-	.clk(dac_clk_i), // input wire clk
-
-
-	.probe0(dac_trig_axi), // input wire [0:0]  probe0  
-	.probe1(rep_cnt), // input wire [15:0]  probe1 
-	.probe2(dly_cnt), // input wire [15:0]  probe2 
-	.probe3(rep_arm), // input wire [0:0]  probe3 
-	.probe4(probe4), // input wire [0:0]  probe4 
-	.probe5(axi_last), // input wire [0:0]  probe5 
-	.probe6(axi_last_pre), // input wire [0:0]  probe6 
-	.probe7(dac_axi_rd), // input wire [13:0]  probe7 
-	.probe8(cyc_cnt), // input wire [15:0]  probe8 
-	.probe9(dac_trig), // input wire [0:0]  probe9 
-	.probe10(dac_trig), // input wire [0:0]  probe10 
-	.probe11(dac_trig) // input wire [0:0]  probe11
-);
-
 endmodule

@@ -74,6 +74,8 @@ logic          trig_pending;
 logic          trig_edge;
 logic          trig_req;
 logic          repeat_req;
+logic          repeat_req_d;
+logic          preload_req;
 logic          dec_step;
 logic [31:0]   dec_cnt_q;
 logic [1:0]    sample_index;
@@ -109,6 +111,24 @@ always_ff @(posedge dac_clk_i) begin
     trig_pending <= 1'b0;
   end else if (trig_edge && set_axi_en_i) begin
     trig_pending <= 1'b1;
+  end
+end
+
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    repeat_req_d <= 1'b0;
+  end else begin
+    repeat_req_d <= repeat_req;
+  end
+end
+
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    preload_req <= 1'b0;
+  end else if (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) begin
+    preload_req <= 1'b0;
+  end else if (trig_edge && !repeat_req_d && set_axi_en_i) begin
+    preload_req <= 1'b1;
   end
 end
 assign trig_req = trig_pending | (trig_edge && set_axi_en_i);
@@ -273,7 +293,7 @@ always_comb begin : fsm_fifo_read
   unique case (rd_state_q)
     RD_IDLE: begin
       if (trig_pending) begin
-        if (preload_done_q)
+        if (preload_done_q && !preload_req)
           rd_state_d = RD_COLD_START;
         else
           rd_state_d = RD_PRELOAD;
@@ -404,24 +424,5 @@ for (GV = 0; GV < NUM_SAMPS; GV = GV + 1) begin : read_decoder
   end
 end
 endgenerate
-
-
-ila_0 your_instance_name (
-	.clk(dac_clk_i), // input wire clk
-
-
-	.probe0(dac_o), // input wire [13:0]  probe0  
-	.probe1(rd_state_d), // input wire [2:0]  probe1 
-	.probe2(trig_edge), // input wire [0:0]  probe2 
-	.probe3(dat_rd_valid), // input wire [0:0]  probe3 
-	.probe4(dat_fifo_rd), // input wire [0:0]  probe4 
-	.probe5(last_pulse), // input wire [0:0]  probe5 
-	.probe6(cycle_cnt_q), // input wire [15:0]  probe6 
-	.probe7(preload_done), // input wire [0:0]  probe7 
-	.probe8(sample_index), // input wire [1:0]  probe8 
-	.probe9(cycle_last), // input wire [0:0]  probe9 
-	.probe10(cycle_reload), // input wire [0:0]  probe10 
-	.probe11(prefetch_next) // input wire [0:0]  probe11
-);
 
 endmodule
