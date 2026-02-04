@@ -23,8 +23,10 @@ module rp_asg_axi_fifo_reader #(
   input  logic [32-1:0]       set_axi_stop_i,
   input  logic [32-1:0]       set_axi_dec_i,
   input  logic [16-1:0]       set_cyc_cnt_i,
+  input  logic               repeat_i,
   output logic [20-1:0]       axi_state_o,
   output logic               axi_last_o,
+  output logic               axi_last_pre_o,
 
   // start pulse to request AXI read
   output logic               start_pulse_o,
@@ -57,6 +59,7 @@ rd_state_t rd_state_d;
 logic [AW-1:0] period_cnt_q;
 logic [AW-1:0] period_words;
 logic          last_pulse;
+logic          last_pre_pulse;
 logic [31:0]   dec_wait_cycles;
 logic [31:0]   dec_timer_q;
 logic          dec_timeout;
@@ -66,12 +69,22 @@ logic [15:0]   sample_buf [0:NUM_SAMPS-1];
 logic [6:0]    preload_timer;
 logic          fifo_active;
 logic          preload_done;
+logic          preload_done_q;
+logic          trig_pending;
+logic          trig_edge;
+logic          trig_req;
+logic          repeat_req;
 logic          dec_step;
 logic [31:0]   dec_cnt_q;
 logic [1:0]    sample_index;
 logic          fifo_ready;
 logic          period_has_words;
 logic          cycle_last;
+logic          start_cycle;
+logic          first_read_pulse;
+logic          restart_cycle;
+logic          cycle_reload;
+logic          prefetch_next;
 
 //---------------------------------------------------------------------------------
 //
@@ -86,7 +99,19 @@ always_ff @(posedge dac_clk_i) begin
     trig_r <= trig_i;
 end
 
-assign start_pulse_o = (trig_i & ~trig_r) && set_axi_en_i && (rd_state_q == RD_IDLE);
+assign trig_edge = trig_i & ~trig_r;
+assign repeat_req = repeat_i && set_axi_en_i;
+
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    trig_pending <= 1'b0;
+  end else if (cycle_reload) begin
+    trig_pending <= 1'b0;
+  end else if (trig_edge && set_axi_en_i) begin
+    trig_pending <= 1'b1;
+  end
+end
+assign trig_req = trig_pending | (trig_edge && set_axi_en_i);
 
 //---------------------------------------------------------------------------------
 //
@@ -98,7 +123,9 @@ always_ff @( posedge dac_clk_i ) begin
     dat_fifo_rd <= 1'b0;
   end else begin
     dat_fifo_rd <= (rd_state_q == RD_PRELOAD  && rd_state_d == RD_COLD_START) ||
-                   (rd_state_q == RD_DECODING && rd_state_d == RD_READ);
+                   (rd_state_q == RD_IDLE     && rd_state_d == RD_COLD_START) ||
+                   (rd_state_q == RD_DECODING && rd_state_d == RD_READ) ||
+                   prefetch_next;
   end
 end
 
@@ -111,16 +138,17 @@ always_ff @( posedge dac_clk_i ) begin
     period_cnt_q <= 'b0;
   end else begin
 
-    if (rd_state_q == RD_IDLE && rd_state_d == RD_PRELOAD) begin
-      period_cnt_q <= period_words;
-    end
-
-    if (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) begin
+    if (restart_cycle) begin
+      period_cnt_q <= period_words - 1;
+    end else if (start_cycle) begin
+      if (first_read_pulse)
+        period_cnt_q <= period_words - 1;
+      else
+        period_cnt_q <= period_words;
+    end else if (first_read_pulse) begin
       if (|period_cnt_q)
         period_cnt_q <= period_cnt_q - 1;
-    end
-
-    if (rd_state_q == RD_DECODING && rd_state_d == RD_READ) begin
+    end else if (rd_state_q == RD_DECODING && rd_state_d == RD_READ) begin
       if (|period_cnt_q)
         period_cnt_q <= period_cnt_q - 1;
       else
@@ -148,13 +176,26 @@ always_ff @( posedge dac_clk_i ) begin
   end
 end
 
+// Pre-last pulse: early marker for repetition trigger (before axi_last_o)
+always_ff @( posedge dac_clk_i ) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    last_pre_pulse <= 1'b0;
+  end else begin
+    last_pre_pulse <= 1'b0;
+
+    if (rd_state_q == RD_DECODING && rd_state_d == RD_READ_LAST) begin
+      last_pre_pulse <= 1'b1;
+    end
+  end
+end
+
 // Cycle counter
 always_ff @( posedge dac_clk_i ) begin
   if (!dac_rstn_i || set_rst_i) begin
     cycle_cnt_q <= 'b0;
   end else begin
 
-    if (rd_state_q == RD_PRELOAD) begin
+    if (cycle_reload) begin
       cycle_cnt_q <= set_cyc_cnt_i;
     end
 
@@ -168,6 +209,8 @@ end
 // Decode pointer
 always_ff @( posedge dac_clk_i ) begin : decode_pointer
   if (!dac_rstn_i || set_rst_i) begin
+    sample_index <= 'b00;
+  end else if (restart_cycle) begin
     sample_index <= 'b00;
   end else begin
     if ((rd_state_q == RD_READ ||
@@ -194,6 +237,8 @@ end
 always_ff @( posedge dac_clk_i ) begin
   if (!dac_rstn_i || set_rst_i) begin
     dec_timer_q <= 0;
+  end else if (restart_cycle) begin
+    dec_timer_q <= 0;
   end else begin
     if (rd_state_q == RD_DECODING)
       dec_timer_q <= dec_timer_q + 1;
@@ -213,13 +258,26 @@ always_ff @( posedge dac_clk_i ) begin
   end
 end
 
+// remember that FIFO was preloaded at least once after reset
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    preload_done_q <= 1'b0;
+  end else if (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) begin
+    preload_done_q <= 1'b1;
+  end
+end
+
 always_comb begin : fsm_fifo_read
   rd_state_d = rd_state_q;
 
   unique case (rd_state_q)
     RD_IDLE: begin
-      if (start_pulse_o)
-        rd_state_d = RD_PRELOAD;
+      if (trig_pending) begin
+        if (preload_done_q)
+          rd_state_d = RD_COLD_START;
+        else
+          rd_state_d = RD_PRELOAD;
+      end
     end
 
     RD_PRELOAD: begin
@@ -256,8 +314,12 @@ always_comb begin : fsm_fifo_read
     end
 
     RD_READ_LAST: begin
-      if (sample_index == 2'b11)
-        rd_state_d = RD_IDLE;
+      if (sample_index == 2'b11) begin
+        if (trig_req || repeat_req)
+          rd_state_d = RD_DECODING;
+        else
+          rd_state_d = RD_IDLE;
+      end
     end
 
     default:
@@ -268,10 +330,22 @@ end
 assign dec_wait_cycles = (set_axi_dec_i << 2) - 4;
 assign dec_timeout     = dec_timer_q == dec_wait_cycles;
 assign axi_last_o      = last_pulse;
+assign axi_last_pre_o  = last_pre_pulse;
 assign fifo_active     = rd_state_q != RD_IDLE;
 assign preload_done    = preload_timer >= FIFO_PRELOAD_SIZE;
 assign period_has_words = |period_cnt_q;
 assign cycle_last      = cycle_cnt_q == 1;
+assign start_cycle     = (rd_state_q == RD_IDLE) &&
+                         ((rd_state_d == RD_PRELOAD) || (rd_state_d == RD_COLD_START));
+assign restart_cycle   = (rd_state_q == RD_READ_LAST) && (sample_index == 2'b11) &&
+                         (trig_req || repeat_req);
+assign cycle_reload    = start_cycle || restart_cycle;
+assign first_read_pulse = (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) ||
+                          (rd_state_q == RD_IDLE    && rd_state_d == RD_COLD_START);
+// Prefetch earlier to cover FIFO read latency (dat_fifo_rd is registered)
+assign prefetch_next   = (rd_state_q == RD_DECODING) && (rd_state_d == RD_READ_LAST) &&
+                         dec_timeout && (trig_req || repeat_req);
+assign start_pulse_o   = start_cycle && !preload_done_q;
 assign fifo_ready      = rd_state_q != RD_IDLE &&
                          rd_state_q != RD_PRELOAD &&
                          rd_state_q != RD_COLD_START;
@@ -297,6 +371,8 @@ end
 
 always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i) begin
+    dec_cnt_q <= 32'h1;
+  end else if (restart_cycle) begin
     dec_cnt_q <= 32'h1;
   end else begin
     if (fifo_ready) begin
@@ -328,5 +404,24 @@ for (GV = 0; GV < NUM_SAMPS; GV = GV + 1) begin : read_decoder
   end
 end
 endgenerate
+
+
+ila_0 your_instance_name (
+	.clk(dac_clk_i), // input wire clk
+
+
+	.probe0(dac_o), // input wire [13:0]  probe0  
+	.probe1(rd_state_d), // input wire [2:0]  probe1 
+	.probe2(trig_edge), // input wire [0:0]  probe2 
+	.probe3(dat_rd_valid), // input wire [0:0]  probe3 
+	.probe4(dat_fifo_rd), // input wire [0:0]  probe4 
+	.probe5(last_pulse), // input wire [0:0]  probe5 
+	.probe6(cycle_cnt_q), // input wire [15:0]  probe6 
+	.probe7(preload_done), // input wire [0:0]  probe7 
+	.probe8(sample_index), // input wire [1:0]  probe8 
+	.probe9(cycle_last), // input wire [0:0]  probe9 
+	.probe10(cycle_reload), // input wire [0:0]  probe10 
+	.probe11(prefetch_next) // input wire [0:0]  probe11
+);
 
 endmodule

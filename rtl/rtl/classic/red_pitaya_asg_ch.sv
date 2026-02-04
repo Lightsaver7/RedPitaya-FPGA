@@ -125,6 +125,7 @@ wire                  axi_dac_do;
 wire                  axi_init;
 reg  [   5-1: 0] axi_dac_do_sr ;
 wire                  axi_last;
+wire                  axi_last_pre;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
@@ -347,6 +348,9 @@ wire rep_arm   = dac_rep && |rep_cnt && (dly_cnt == 32'h0);
 wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
 wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
+wire cycle_end_pre = set_axi_en_i ? axi_last_pre : (~dac_npnt_sub_neg);
+wire rep_end_pre   = (cyc_cnt == 16'h1) && cycle_end_pre;
+wire dac_trig_axi  = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end_pre));
 
 assign dac_trig = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end)) ;
 
@@ -427,17 +431,38 @@ rp_asg_axi #(
   .dac_o           ( dac_axi_rd        ),
   .dac_clk_i       ( dac_clk_i         ),
   .dac_rstn_i      ( dac_rstn_i        ),
-  .trig_i          ( dac_trig          ),
+  .trig_i          ( dac_trig_axi      ),
 
   .axi_sys         ( axi_sys           ),      
 
   .set_rst_i       ( set_rst_i ),
   .set_axi_en_i    ( set_axi_en_i      ),
+  .repeat_i        ( rep_arm           ),
   .set_axi_start_i ( set_axi_start_i   ),
   .set_axi_stop_i  ( set_axi_stop_i    ),
   .set_axi_dec_i   ( set_axi_dec_i     ),
   .set_cyc_cnt_i   ( set_ncyc_i        ),
   .axi_state_o     ( axi_state_o       ),
-  .axi_last_o      ( axi_last          )
+  .axi_last_o      ( axi_last          ),
+  .axi_last_pre_o  ( axi_last_pre      )
 );
+
+ila_1 your_instance_name (
+	.clk(dac_clk_i), // input wire clk
+
+
+	.probe0(dac_trig_axi), // input wire [0:0]  probe0  
+	.probe1(rep_cnt), // input wire [15:0]  probe1 
+	.probe2(dly_cnt), // input wire [15:0]  probe2 
+	.probe3(rep_arm), // input wire [0:0]  probe3 
+	.probe4(probe4), // input wire [0:0]  probe4 
+	.probe5(axi_last), // input wire [0:0]  probe5 
+	.probe6(axi_last_pre), // input wire [0:0]  probe6 
+	.probe7(dac_axi_rd), // input wire [13:0]  probe7 
+	.probe8(cyc_cnt), // input wire [15:0]  probe8 
+	.probe9(dac_trig), // input wire [0:0]  probe9 
+	.probe10(dac_trig), // input wire [0:0]  probe10 
+	.probe11(dac_trig) // input wire [0:0]  probe11
+);
+
 endmodule

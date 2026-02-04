@@ -23,12 +23,14 @@ module rp_asg_axi #(
    // configuration
    input                  set_rst_i       ,  //!< set FSM to reset
    input                  set_axi_en_i    ,  //!< enable AXI buffer read
+   input                  repeat_i        ,  //!< repeat arm (no delay)
    input      [  32-1: 0] set_axi_start_i ,  //!< AXI start address
    input      [  32-1: 0] set_axi_stop_i  ,  //!< AXI stop address
    input      [  32-1: 0] set_axi_dec_i   ,  //!< AXI decimation
    input      [  16-1: 0] set_cyc_cnt_i   ,  //!< limit number of writes
    output     [  20-1: 0] axi_state_o     ,  //!< AXI state
-   output                 axi_last_o         //!< AXI final sample
+   output                 axi_last_o      ,  //!< AXI final sample
+   output                 axi_last_pre_o     //!< AXI pre-final sample
 );
 
 //---------------------------------------------------------------------------------
@@ -102,8 +104,10 @@ rp_asg_axi_fifo_reader #(
   .set_axi_stop_i  (set_axi_stop_i),
   .set_axi_dec_i   (set_axi_dec_i),
   .set_cyc_cnt_i   (set_cyc_cnt_i),
+  .repeat_i        (repeat_i),
   .axi_state_o     (axi_state_o),
   .axi_last_o      (axi_last_o),
+  .axi_last_pre_o  (axi_last_pre_o),
   .start_pulse_o   (start_pulse_dac),
   .dat_fifo_out    (dat_fifo_out),
   .dat_rd_valid    (dat_rd_valid),
