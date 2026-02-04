@@ -65,10 +65,13 @@ logic [15:0]   cycle_cnt_q;
 logic [15:0]   sample_buf [0:NUM_SAMPS-1];
 logic [6:0]    preload_timer;
 logic          fifo_active;
+logic          preload_done;
 logic          dec_step;
 logic [31:0]   dec_cnt_q;
 logic [1:0]    sample_index;
 logic          fifo_ready;
+logic          period_has_words;
+logic          cycle_last;
 
 //---------------------------------------------------------------------------------
 //
@@ -94,15 +97,8 @@ always_ff @( posedge dac_clk_i ) begin
   if (!dac_rstn_i || set_rst_i) begin
     dat_fifo_rd <= 1'b0;
   end else begin
-    dat_fifo_rd <= 1'b0;
-
-    if (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) begin
-      dat_fifo_rd <= 1'b1;
-    end
-
-    if (rd_state_q == RD_DECODING && rd_state_d == RD_READ) begin
-      dat_fifo_rd <= 1'b1;
-    end
+    dat_fifo_rd <= (rd_state_q == RD_PRELOAD  && rd_state_d == RD_COLD_START) ||
+                   (rd_state_q == RD_DECODING && rd_state_d == RD_READ);
   end
 end
 
@@ -228,7 +224,7 @@ always_comb begin : fsm_fifo_read
 
     RD_PRELOAD: begin
       // use a timer because the FIFO filling time is different for several channels.
-      if (preload_timer >= FIFO_PRELOAD_SIZE)
+      if (preload_done)
         rd_state_d = RD_COLD_START;
     end
 
@@ -248,10 +244,10 @@ always_comb begin : fsm_fifo_read
 
     RD_DECODING: begin
       if (dec_timeout) begin
-        if (|period_cnt_q) begin
+        if (period_has_words) begin
           rd_state_d = RD_READ;
         end else begin
-          if (cycle_cnt_q == 1)
+          if (cycle_last)
             rd_state_d = RD_READ_LAST;
           else
             rd_state_d = RD_READ;
@@ -266,13 +262,16 @@ always_comb begin : fsm_fifo_read
 
     default:
       rd_state_d = RD_IDLE;
-  endcase
+endcase
 end
 
 assign dec_wait_cycles = (set_axi_dec_i << 2) - 4;
 assign dec_timeout     = dec_timer_q == dec_wait_cycles;
 assign axi_last_o      = last_pulse;
 assign fifo_active     = rd_state_q != RD_IDLE;
+assign preload_done    = preload_timer >= FIFO_PRELOAD_SIZE;
+assign period_has_words = |period_cnt_q;
+assign cycle_last      = cycle_cnt_q == 1;
 assign fifo_ready      = rd_state_q != RD_IDLE &&
                          rd_state_q != RD_PRELOAD &&
                          rd_state_q != RD_COLD_START;

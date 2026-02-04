@@ -119,23 +119,6 @@ wire  [  20-1:0 ] axi_a_state    , axi_b_state        ;
 reg   [  32-1: 0] step_a_hi      , step_b_hi   ;
 reg   [  32-1: 0] step_a_lo      , step_b_lo   ;
 
-// wire [8-1:0] axi_a_lvl = axi_a_state[20-1:12];
-// wire [8-1:0] axi_b_lvl = axi_b_state[20-1:12];
-// ila_0 dut (
-//     .clk(dac_clk_i), // input wire clk
-
-//     .probe0(axi_a_lvl),   // [7:0]
-//     .probe1(axi_b_lvl),   // [7:0]
-//     .probe2(trig_a_sw),   // [0:0]
-//     .probe3(trig_b_sw),   // [0:0]
-//     .probe4(dac_a_o),     // [13:0]
-//     .probe5(dac_b_o),     // [13:0]
-//     .probe6(trig_a_i),    // [0:0]
-//     .probe7(trig_b_i),    // [0:0]
-//     .probe8(axi_a_state), // [19:0]
-//     .probe9(axi_b_state)  // [19:0]
-// );
-
 red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
 (
   // DAC

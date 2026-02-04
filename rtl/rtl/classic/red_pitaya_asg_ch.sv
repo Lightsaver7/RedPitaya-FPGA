@@ -85,30 +85,6 @@ module red_pitaya_asg_ch #(
    output    [  20-1: 0] axi_state_o        //!< AXI state
 );
 
-// ila_2 ash_ch_dut (
-// 	.clk(dac_clk_i), // input wire clk
-
-
-// 	.probe0(trig_in), // input wire [0:0]  probe0  
-// 	.probe1(prefill), // input wire [0:0]  probe1 
-// 	.probe2(trig_in), // input wire [0:0]  probe2 
-// 	.probe3(trig_ext_i), // input wire [0:0]  probe3
-// 	.probe4(trig_sw_i), // input wire [0:0]  probe4
-// 	.probe5(trig_src_i), // input wire [2:0]  probe5
-// 	.probe6(set_rst_i), // input wire [0:0]  probe6
-// 	.probe7(do_read), // input wire [0:0]  probe7
-// 	.probe8(dac_trig), // input wire [0:0]  probe8
-// 	.probe9(set_axi_en_i), // input wire [0:0]  probe9
-// 	.probe10(axi_dac_do), // input wire [0:0]  probe10
-// 	.probe11(dac_o), // input wire [14-1:0]  probe11
-// 	.probe12(out_sel), // input wire [5-1:0]  probe12
-//   .probe13(rep_cnt), // [15:0]
-//   .probe14(cyc_cnt), // [15:0]
-//   .probe15(axi_last), // [0:0]
-//   .probe16(set_rdly_i) // [32:0]
-// );
-
-
 //---------------------------------------------------------------------------------
 //
 //  DAC buffer RAM
