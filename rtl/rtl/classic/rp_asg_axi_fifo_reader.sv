@@ -184,7 +184,7 @@ always_ff @( posedge dac_clk_i ) begin
   end else begin
     last_pulse <= 1'b0;
 
-    if (rd_state_q == RD_READ_LAST && sample_index == 2'b10) begin
+    if (rd_state_q == RD_READ_LAST && sample_index == 2'b11) begin
       last_pulse <= 1'b1;
     end
 
