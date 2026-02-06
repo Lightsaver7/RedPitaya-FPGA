@@ -81,7 +81,7 @@ sync_fifo inst_sync_fifo
 (
   .wr_clk         (dac_clk_i        ),
   .rd_clk         (axi_sys.clk       ),
-  .rst            (!dac_rstn_i       ),
+  .rst            (!dac_rstn_i || set_rst_i),
   .din            (req_payload      ),
   .wr_en          (start_pulse_i     ),
   .full           (                  ),

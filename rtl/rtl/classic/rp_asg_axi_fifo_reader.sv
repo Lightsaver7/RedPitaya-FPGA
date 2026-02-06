@@ -78,6 +78,7 @@ logic          repeat_req_d;
 logic          preload_req;
 logic          dec_step;
 logic [31:0]   dec_cnt_q;
+logic [31:0]   dec_safe;
 logic [1:0]    sample_index;
 logic          fifo_ready;
 logic          period_has_words;
@@ -87,6 +88,8 @@ logic          first_read_pulse;
 logic          restart_cycle;
 logic          cycle_reload;
 logic          prefetch_next;
+logic          dat_fifo_empty_d;
+logic          cold_start_pulse;
 
 //---------------------------------------------------------------------------------
 //
@@ -95,7 +98,7 @@ logic          prefetch_next;
 logic trig_r;
 
 always_ff @(posedge dac_clk_i) begin
-  if (!dac_rstn_i)
+  if (!dac_rstn_i || set_rst_i)
     trig_r <= 1'b0;
   else
     trig_r <= trig_i;
@@ -145,7 +148,8 @@ always_ff @( posedge dac_clk_i ) begin
     dat_fifo_rd <= (rd_state_q == RD_PRELOAD  && rd_state_d == RD_COLD_START) ||
                    (rd_state_q == RD_IDLE     && rd_state_d == RD_COLD_START) ||
                    (rd_state_q == RD_DECODING && rd_state_d == RD_READ) ||
-                   prefetch_next;
+                   prefetch_next ||
+                   cold_start_pulse;
   end
 end
 
@@ -174,6 +178,14 @@ always_ff @( posedge dac_clk_i ) begin
       else
         period_cnt_q <= period_words - 1;
     end
+  end
+end
+
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    dat_fifo_empty_d <= 1'b1;
+  end else begin
+    dat_fifo_empty_d <= dat_fifo_empty;
   end
 end
 
@@ -347,7 +359,8 @@ always_comb begin : fsm_fifo_read
 endcase
 end
 
-assign dec_wait_cycles = (set_axi_dec_i << 2) - 4;
+assign dec_safe        = (set_axi_dec_i == 0) ? 32'd1 : set_axi_dec_i;
+assign dec_wait_cycles = (dec_safe << 2) - 4;
 assign dec_timeout     = dec_timer_q == dec_wait_cycles;
 assign axi_last_o      = last_pulse;
 assign axi_last_pre_o  = last_pre_pulse;
@@ -362,6 +375,10 @@ assign restart_cycle   = (rd_state_q == RD_READ_LAST) && (sample_index == 2'b11)
 assign cycle_reload    = start_cycle || restart_cycle;
 assign first_read_pulse = (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) ||
                           (rd_state_q == RD_IDLE    && rd_state_d == RD_COLD_START);
+// If FIFO was empty on entry, issue one read when it becomes non-empty.
+assign cold_start_pulse = (rd_state_q == RD_COLD_START) &&
+                          dat_fifo_empty_d &&
+                          !dat_fifo_empty;
 // Prefetch earlier to cover FIFO read latency (dat_fifo_rd is registered)
 assign prefetch_next   = (rd_state_q == RD_DECODING) && (rd_state_d == RD_READ_LAST) &&
                          dec_timeout && (trig_req || repeat_req);
@@ -396,7 +413,7 @@ always_ff @(posedge dac_clk_i) begin
     dec_cnt_q <= 32'h1;
   end else begin
     if (fifo_ready) begin
-      if (dec_cnt_q < set_axi_dec_i)
+      if (dec_cnt_q < dec_safe)
         dec_cnt_q <= dec_cnt_q + 1;
       else
         dec_cnt_q <= 32'h1;
@@ -406,7 +423,7 @@ always_ff @(posedge dac_clk_i) begin
   end
 end
 
-assign dec_step = dec_cnt_q == set_axi_dec_i;
+assign dec_step = dec_cnt_q == dec_safe;
 
 //---------------------------------------------------------------------------------
 //
@@ -424,5 +441,31 @@ for (GV = 0; GV < NUM_SAMPS; GV = GV + 1) begin : read_decoder
   end
 end
 endgenerate
+
+ila_0 your_instance_name (
+	.clk(dac_clk_i), // input wire clk
+
+
+	.probe0(rd_state_q), // input wire [2:0]  probe0  
+	.probe1(rd_state_d), // input wire [2:0]  probe1 
+	.probe2(dat_fifo_rd), // input wire [0:0]  probe2 
+	.probe3(dat_rd_valid), // input wire [0:0]  probe3 
+	.probe4(dat_fifo_empty), // input wire [0:0]  probe4 
+	.probe5(dat_rd_fifo_lvl), // input wire [6:0]  probe5 
+	.probe6(sample_index), // input wire [1:0]  probe6 
+	.probe7(dec_cnt_q), // input wire [31:0]  probe7 
+	.probe8(dec_step), // input wire [0:0]  probe8 
+	.probe9(dec_timer_q), // input wire [31:0]  probe9 
+	.probe10(dec_timeout), // input wire [0:0]  probe10 
+	.probe11(period_cnt_q), // input wire [31:0]  probe11 
+	.probe12(period_words), // input wire [31:0]  probe12 
+	.probe13(cycle_cnt_q), // input wire [15:0]  probe13 
+	.probe14(start_cycle), // input wire [0:0]  probe14 
+	.probe15(restart_cycle), // input wire [0:0]  probe15 
+	.probe16(prefetch_next), // input wire [0:0]  probe16 
+	.probe17(axi_last_o), // input wire [0:0]  probe17 
+	.probe18(axi_last_pre_o), // input wire [0:0]  probe18 
+	.probe19(dac_o) // input wire [13:0]  probe19 
+);
 
 endmodule
