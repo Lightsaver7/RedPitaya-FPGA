@@ -6,7 +6,7 @@
 module rp_asg_axi_fifo_reader #(
   parameter int DW = 64,
   parameter int AW = 32,
-  parameter int FIFO_PRELOAD_SIZE = 64,
+  parameter int FIFO_PRELOAD_SIZE = 120,
   parameter int RD_LVL_W = 7
 )(
   // DAC
@@ -100,6 +100,12 @@ logic          buf_empty;
 logic          buf_push;
 logic          buf_pop;
 logic [15:0]   sample_data;
+logic [AW-1:0] axi_start_q;
+logic [AW-1:0] axi_stop_q;
+logic [31:0]   axi_dec_q;
+logic [AW-1:0] axi_start_use;
+logic [AW-1:0] axi_stop_use;
+logic [31:0]   axi_dec_use;
 
 //---------------------------------------------------------------------------------
 //
@@ -246,7 +252,10 @@ end
 
 // NOTE: incoming stop address is (real_stop - 4) due to upstream pipeline,
 // so compensate by +4 to compute inclusive word count
-assign period_words = ((set_axi_stop_i + 4 - set_axi_start_i) >> 3) + 1;
+assign axi_start_use = start_cycle ? set_axi_start_i : axi_start_q;
+assign axi_stop_use  = start_cycle ? set_axi_stop_i  : axi_stop_q;
+assign axi_dec_use   = start_cycle ? set_axi_dec_i   : axi_dec_q;
+assign period_words  = ((axi_stop_use + 4 - axi_start_use) >> 3) + 1;
 
 assign start_cycle   = (rd_state_q == RD_IDLE) && (rd_state_d != RD_IDLE);
 assign restart_cycle = cycle_done && (cycle_cnt_q == 16'h1) && (trig_req || repeat_req);
@@ -269,6 +278,18 @@ always_ff @(posedge dac_clk_i) begin
       if (|words_left_q)
         words_left_q <= words_left_q - 1'b1;
     end
+  end
+end
+
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    axi_start_q <= '0;
+    axi_stop_q  <= '0;
+    axi_dec_q   <= 32'h0;
+  end else if (start_cycle) begin
+    axi_start_q <= set_axi_start_i;
+    axi_stop_q  <= set_axi_stop_i;
+    axi_dec_q   <= set_axi_dec_i;
   end
 end
 
@@ -304,7 +325,7 @@ assign axi_last_pre_o = last_pre_pulse;
 //
 //  decimation and sample index
 
-assign dec_safe = (set_axi_dec_i == 0) ? 32'd1 : set_axi_dec_i;
+assign dec_safe = (axi_dec_use == 0) ? 32'd1 : axi_dec_use;
 assign dec_step = dec_cnt_q == dec_safe;
 assign fifo_active = rd_state_q != RD_IDLE;
 assign fifo_ready  = rd_state_q == RD_ACTIVE;
@@ -393,34 +414,5 @@ assign axi_state_o  =  {1'b0,            // [19:19]
                         1'b0,            // [2:2]
                         fifo_ready,      // [1:1]
                         1'b0};           // [0:0]
-
-//---------------------------------------------------------------------------------
-//
-// debug
-
-ila_0 your_instance_name (
-  .clk(dac_clk_i), // input wire clk
-
-  .probe0(rd_state_q), // input wire [2:0]  probe0
-  .probe1(rd_state_d), // input wire [2:0]  probe1
-  .probe2(dat_fifo_rd), // input wire [0:0]  probe2
-  .probe3(dat_rd_valid), // input wire [0:0]  probe3
-  .probe4(dat_fifo_empty), // input wire [0:0]  probe4
-  .probe5(dat_rd_fifo_lvl), // input wire [6:0]  probe5
-  .probe6(sample_index), // input wire [1:0]  probe6
-  .probe7(dec_cnt_q), // input wire [31:0]  probe7
-  .probe8(dec_step), // input wire [0:0]  probe8
-  .probe9(words_left_q), // input wire [31:0]  probe9
-  .probe10(cycle_done), // input wire [0:0]  probe10
-  .probe11(words_left_q), // input wire [31:0]  probe11
-  .probe12(period_words), // input wire [31:0]  probe12
-  .probe13(cycle_cnt_q), // input wire [15:0]  probe13
-  .probe14(start_cycle), // input wire [0:0]  probe14
-  .probe15(restart_cycle), // input wire [0:0]  probe15
-  .probe16(rd_en_req), // input wire [0:0]  probe16
-  .probe17(axi_last_o), // input wire [0:0]  probe17
-  .probe18(axi_last_pre_o), // input wire [0:0]  probe18
-  .probe19(dac_o) // input wire [13:0]  probe19
-);
 
 endmodule

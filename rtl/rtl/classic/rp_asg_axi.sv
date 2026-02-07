@@ -41,7 +41,7 @@ localparam AW = 32;
 localparam LW =  4;
 localparam AXI_BURST_LEN      = 16;
 localparam DATA_REQUEST_LEVEL = 128-16;
-localparam FIFO_PRELOAD_SIZE  = 64;
+localparam FIFO_PRELOAD_SIZE  = 120;
 
 logic            start_pulse_dac;
 
