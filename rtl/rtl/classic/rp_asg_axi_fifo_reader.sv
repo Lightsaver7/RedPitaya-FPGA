@@ -79,7 +79,6 @@ logic          trig_pending;
 logic          trig_edge;
 logic          trig_req;
 logic          repeat_req;
-logic          repeat_req_d;
 logic          preload_req;
 logic          fifo_active;
 logic          fifo_ready;
@@ -130,21 +129,14 @@ end
 
 always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i || set_rst_i) begin
-    repeat_req_d <= 1'b0;
-  end else begin
-    repeat_req_d <= repeat_req;
-  end
-end
-
-always_ff @(posedge dac_clk_i) begin
-  if (!dac_rstn_i || set_rst_i) begin
     preload_req <= 1'b0;
   end else if (rd_state_q == RD_PRELOAD && rd_state_d == RD_COLD_START) begin
     preload_req <= 1'b0;
-  end else if (trig_edge && !repeat_req_d && set_axi_en_i) begin
+  end else if (trig_edge && !repeat_req && set_axi_en_i) begin
     preload_req <= 1'b1;
   end
 end
+
 assign trig_req = trig_pending | (trig_edge && set_axi_en_i);
 
 //---------------------------------------------------------------------------------
