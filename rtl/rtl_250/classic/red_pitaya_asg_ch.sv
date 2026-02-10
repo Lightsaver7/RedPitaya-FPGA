@@ -47,7 +47,7 @@ module red_pitaya_asg_ch #(
    input      [  3-1: 0] trig_src_i      ,  //!< trigger source selector
    output                trig_done_o     ,  //!< trigger event
    // buffer ctrl
-   input                 sys_clk_i       ,  //!< 
+   input                 sys_clk_i       ,  //!< system clock for buffer access
    input                 buf_we_i        ,  //!< buffer write enable
    input      [ 14-1: 0] buf_addr_i      ,  //!< buffer address
    input      [ 14-1: 0] buf_wdata_i     ,  //!< buffer write data
@@ -61,7 +61,7 @@ module red_pitaya_asg_ch #(
    input     [  32-1: 0] set_step_lo_i   ,  //!< set pointer step, low frequency
    input     [  32-1: 0] set_ofs_i       ,  //!< set reset offset
    input                 set_rst_i       ,  //!< set FSM to reset
-   input                 set_rdly_mode_i      ,  //!< sets the behavior of a constant signal before and after burst
+   input                 set_rdly_mode_i ,  //!< sets the behavior of a constant signal before and after burst
    input                 set_wrap_i      ,  //!< set wrap enable
    input     [  14-1: 0] set_amp_i       ,  //!< set amplitude scale
    input     [  14-1: 0] set_dc_i        ,  //!< set output offset
@@ -81,9 +81,9 @@ module red_pitaya_asg_ch #(
    input     [  32-1: 0] set_axi_start_i ,  //!< AXI start address
    input     [  32-1: 0] set_axi_stop_i  ,  //!< AXI stop address
    input     [  32-1: 0] set_axi_dec_i   ,  //!< AXI decimation
-   output    [  16-1: 0] axi_state_o     ,  //!< AXI state
-   output    [  32-1: 0] err_cnt_o       ,  //!< number of missed samples
-   output    [  32-1: 0] transf_cnt_o       //!< number of successful AXI transfers
+   output    [  20-1: 0] axi_state_o     ,  //!< AXI state
+   output    [  32-1: 0] err_cnt_o       ,  //!< number of missed samples (unused)
+   output    [  32-1: 0] transf_cnt_o       //!< number of successful AXI transfers (unused)
 );
 
 //---------------------------------------------------------------------------------
@@ -102,7 +102,6 @@ wire [14-1:0] lfsr_noise;
     .seed_i  (  set_seed_i ), // init value
     .dat_o   (  lfsr_noise )  // data output noise
   );
-
 
 localparam PNT_SIZE = RSZ+16+32;
 typedef enum logic [0:0] {
@@ -123,14 +122,11 @@ reg   [PNT_SIZE-1: 0] axi_pntp  ; // previous read pointer AXI
 wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
 wire                  dac_npnt_sub_neg;
-
-reg   [  15-1: 0] set_amp_r ;
-reg   [  28-1: 0] dac_mult  ;
-reg   [  15-1: 0] dac_msr   ;
 wire                  axi_dac_do;
 wire                  axi_init;
 reg  [   5-1: 0] axi_dac_do_sr ;
 wire                  axi_last;
+wire                  axi_last_pre;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
@@ -175,10 +171,17 @@ end
 
 always @(posedge dac_clk_i) // shift regs are needed because of processing path delay
 begin
-   dac_do_sr     <= {dac_do_sr[3:0] , dac_do     };
-   axi_dac_do_sr <= {axi_dac_do_sr[3:0], axi_dac_do };
-   lastval_sr    <= {lastval_sr[3:0], ~do_read    };
-   zero_sr       <= {zero_sr[3:0]   , set_zero_i };
+   if (!dac_rstn_i || set_rst_i) begin
+      dac_do_sr     <= 5'b0;
+      axi_dac_do_sr <= 5'b0;
+      lastval_sr    <= 5'b0;
+      zero_sr       <= 5'b0;
+   end else begin
+      dac_do_sr     <= {dac_do_sr[3:0] , dac_do     };
+      axi_dac_do_sr <= {axi_dac_do_sr[3:0], axi_dac_do };
+      lastval_sr    <= {lastval_sr[3:0], ~do_read    };
+      zero_sr       <= {zero_sr[3:0]   , set_zero_i };
+   end
 end
 
 // write
@@ -192,14 +195,9 @@ buf_rdata_o <= dac_buf[buf_addr_i] ;
 // scale and offset
 always @(posedge dac_clk_i)
 begin
-   set_amp_r <= {1'b0,set_amp_i} ;
-
-   dac_mult <= $signed(dac_rdat) * $signed(set_amp_r) ;
-   dac_msr  <= dac_mult[28-1:13] ;
-   dac_sum  <= $signed(dac_msr) + $signed(set_dc_i) ;
+   dac_mult <= $signed(dac_rdat) * $signed({1'b0,set_amp_i}) ;
+   dac_sum  <= $signed(dac_mult[28-1:13]) + $signed(set_dc_i) ;
    dac_o    <= ^dac_sum[15-1:15-2] ? {dac_sum[15-1], {13{~dac_sum[15-1]}}} : dac_sum[13:0];
-
-
 end
 
 //---------------------------------------------------------------------------------
@@ -214,6 +212,10 @@ reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
 reg  [   8-1: 0] dly_tick     ;
 reg              init_run     ;
+
+reg  [  32-1: 0] set_step      ;  
+reg  [  32-1: 0] set_step_lo      ;  
+
 
 reg              dac_rep      ;
 wire             dac_trig     ;
@@ -271,15 +273,17 @@ end
 // state machine
 always @(posedge dac_clk_i) begin
    if (dac_rstn_i == 1'b0) begin
-      cyc_cnt   <= 16'h0 ;
-      rep_cnt   <= 16'h0 ;
-      dly_cnt   <= 32'h0 ;
-      dly_tick  <=  8'h0 ;
-      dac_do    <=  1'b0 ;
-      dac_rep   <=  1'b0 ;
-      trig_in   <=  1'b0 ;
-      dac_pntp  <= {PNT_SIZE{1'b0}} ;
-      dac_trigr <=  1'b0 ;
+      cyc_cnt      <= 16'h0 ;
+      rep_cnt      <= 16'h0 ;
+      dly_cnt      <= 32'h0 ;
+      dly_tick     <=  8'h0 ;
+      dac_do       <=  1'b0 ;
+      dac_rep      <=  1'b0 ;
+      trig_in      <=  1'b0 ;
+      dac_pntp     <= {PNT_SIZE{1'b0}} ;
+      dac_trigr    <=  1'b0 ;
+      set_step     <= 32'h0 ; 
+      set_step_lo  <= 32'h0 ;
    end
    else begin
       // make 1us tick
@@ -290,7 +294,7 @@ always @(posedge dac_clk_i) begin
 
       // delay between repetitions 
       if (set_rst_i || do_read_start)
-         dly_cnt <= set_rdly_i ;
+         dly_cnt <= set_rdly_i;
       else if (|dly_cnt && (dly_tick == 8'd124)) begin// last value counter takes precedent
          if(dly_cnt > 'h1 || (dly_cnt == 'h1))
             dly_cnt <= dly_cnt - 32'h1 ;
@@ -308,6 +312,7 @@ always @(posedge dac_clk_i) begin
       dac_pntp  <= dac_pnt;
       axi_pntp  <= axi_pnt;
       dac_trigr <= dac_trig; // ignore trigger when count
+
       if (dac_trig)
          cyc_cnt <= set_ncyc_i ;
       else if (!dac_trigr && |cyc_cnt && buf_cycle)
@@ -320,6 +325,11 @@ always @(posedge dac_clk_i) begin
           3'd3 : trig_in <= ext_trig_n  ; // external negative edge
        default : trig_in <= 1'b0        ;
       endcase
+
+      if (trig_in) begin
+        set_step <= set_step_i;
+        set_step_lo <= set_step_lo_i;
+      end
 
       // in cycle mode
       if (dac_trig && !set_rst_i && !set_axi_en_i)
@@ -335,12 +345,17 @@ always @(posedge dac_clk_i) begin
    end
 end
 
-assign dac_trig = (!dac_rep && trig_in) || (dac_rep && |rep_cnt && (dly_cnt == 32'h0) && (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle) ;
+wire rep_arm   = dac_rep && |rep_cnt && (dly_cnt == 32'h0);
+wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
+wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
+wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
+wire cycle_end_pre = set_axi_en_i ? axi_last_pre : (~dac_npnt_sub_neg);
+wire rep_end_pre   = (cyc_cnt == 16'h1) && cycle_end_pre;
+wire dac_trig_axi  = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end_pre));
 
+assign dac_trig = (!dac_rep && trig_in) || (rep_arm && (rep_idle || rep_end)) ;
 
-reg [PNT_SIZE: 0] dac_pnt_rem  ; // final step over size
-// dac_npnt_sub = dac_npnt - size - 1  ==  dac_pnt + step - size - 1
-assign dac_npnt_sub = {1'b0,dac_pnt} + dac_pnt_rem ;   // dac_npnt - {1'b0,set_size_i} - 1;
+assign dac_npnt_sub = dac_npnt - {1'b0,set_size_i,32'h0} - 1;
 assign dac_npnt_sub_neg = dac_npnt_sub[PNT_SIZE];
 
 // read pointer logic
@@ -348,7 +363,6 @@ always @(posedge dac_clk_i)
 if (dac_rstn_i == 1'b0) begin
    dac_pnt  <= {PNT_SIZE{1'b0}};
 end else begin
-   dac_pnt_rem <= {1'b0,set_step_i[RSZ+15:0],set_step_lo_i} - {1'b0,set_size_i,32'h0} - 1 ;
    if (set_rst_i || (dac_trig && !dac_do)) // manual reset or start
       dac_pnt <= {set_ofs_i[RSZ+15:0],32'h0};
    else if (dac_do) begin
@@ -357,8 +371,10 @@ end else begin
    end
 end
 
-assign dac_npnt = dac_do ? dac_pnt + {set_step_i[RSZ+15:0],set_step_lo_i} : dac_pnt;
+assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
 assign trig_done_o = !dac_rep && trig_in;
+assign err_cnt_o = 32'h0;
+assign transf_cnt_o = 32'h0;
 
 //---------------------------------------------------------------------------------
 //
@@ -371,7 +387,7 @@ reg  [ 20-1: 0] ext_trig_debp  ;
 reg  [ 20-1: 0] ext_trig_debn  ;
 
 always @(posedge dac_clk_i) begin
-   if (dac_rstn_i == 1'b0) begin
+   if (dac_rstn_i == 1'b0 || set_rst_i) begin
       ext_trig_in   <=  3'h0 ;
       ext_trig_dp   <=  2'h0 ;
       ext_trig_dn   <=  2'h0 ;
@@ -415,20 +431,20 @@ rp_asg_axi #(
   .dac_o           ( dac_axi_rd        ),
   .dac_clk_i       ( dac_clk_i         ),
   .dac_rstn_i      ( dac_rstn_i        ),
-  .trig_i          ( dac_trig          ),
+  .trig_i          ( dac_trig_axi      ),
 
   .axi_sys         ( axi_sys           ),      
 
-  .set_rst_i       ( set_rst_i         ),
+  .set_rst_i       ( set_rst_i ),
   .set_axi_en_i    ( set_axi_en_i      ),
+  .repeat_i        ( rep_arm           ),
   .set_axi_start_i ( set_axi_start_i   ),
   .set_axi_stop_i  ( set_axi_stop_i    ),
   .set_axi_dec_i   ( set_axi_dec_i     ),
   .set_cyc_cnt_i   ( set_ncyc_i        ),
-  .cyc_cnt_i       ( cyc_cnt           ),
   .axi_state_o     ( axi_state_o       ),
   .axi_last_o      ( axi_last          ),
-  .err_cnt_o       ( err_cnt_o         ),
-  .transf_cnt_o    ( transf_cnt_o      )
+  .axi_last_pre_o  ( axi_last_pre      )
 );
+
 endmodule
