@@ -71,9 +71,10 @@ set_property -dict [list \
   CONFIG.Fifo_Implementation {Independent_Clocks_Block_RAM} \
   CONFIG.Full_Flags_Reset_Value {1} \
   CONFIG.INTERFACE_TYPE {Native} \
-  CONFIG.Input_Data_Width {128} \
+  CONFIG.Input_Data_Width {64} \
   CONFIG.Input_Depth {16} \
-  CONFIG.Output_Data_Width {128} \
+  CONFIG.Output_Data_Width {64} \
+  CONFIG.Valid_Flag {true} \
 ] [get_ips sync_fifo]
 
 # Runtime Parameters

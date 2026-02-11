@@ -114,14 +114,12 @@ reg   [  32-1: 0] set_a_axi_stop , set_b_axi_stop     ;
 reg               set_a_axi_en   , set_b_axi_en       ;
 reg   [  32-1:0 ] set_a_axi_dec  , set_b_axi_dec      ;
 
-wire  [  16-1:0 ] axi_a_state    , axi_b_state        ;
-wire  [  32-1:0 ] axi_a_err      , axi_b_err          ;
-wire  [  32-1:0 ] axi_a_transf   , axi_b_transf       ;
+wire  [  20-1:0 ] axi_a_state    , axi_b_state        ;
 
 reg   [  32-1: 0] step_a_hi      , step_b_hi   ;
 reg   [  32-1: 0] step_a_lo      , step_b_lo   ;
 
-red_pitaya_asg_ch  #(.RSZ (RSZ)) chA 
+red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
 (
   // DAC
   .dac_o           (dac_a_o          ),  // dac data output
@@ -168,9 +166,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
   .set_axi_start_i (set_a_axi_start  ),  // AXI start address
   .set_axi_stop_i  (set_a_axi_stop   ),  // AXI stop address
   .set_axi_dec_i   (set_a_axi_dec    ),  // AXI decimation
-  .axi_state_o     (axi_a_state      ),  // AXI state
-  .err_cnt_o       (axi_a_err        ),  // error counter
-  .transf_cnt_o    (axi_a_transf     )   // transfer counter
+  .axi_state_o     (axi_a_state      )   // AXI state
 );
 
 
@@ -220,9 +216,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chB
   .set_axi_start_i (set_b_axi_start  ),  // AXI start address
   .set_axi_stop_i  (set_b_axi_stop   ),  // AXI stop address
   .set_axi_dec_i   (set_b_axi_dec    ),  // AXI decimation
-  .axi_state_o     (axi_b_state      ),  // AXI state
-  .err_cnt_o       (axi_b_err        ),  // error counter
-  .transf_cnt_o    (axi_b_transf     )   // transfer counter
+  .axi_state_o     (axi_b_state      )   // AXI state
 );
 
 always @(posedge dac_clk_i)
@@ -438,7 +432,7 @@ end else begin
      20'h00080 : begin sys_ack <= sys_en;          sys_rdata <= rand_a_en                          ; end
      20'h00084 : begin sys_ack <= sys_en;          sys_rdata <= rand_b_en                          ; end
 
-     20'h00100 : begin sys_ack <= sys_en;          sys_rdata <= {axi_b_state,axi_a_state}          ; end
+     20'h00100 : begin sys_ack <= sys_en;          sys_rdata <= {axi_b_state[16-1:0],axi_a_state[16-1:0]} ; end
      20'h00104 : begin sys_ack <= sys_en;          sys_rdata <= {{32-1{1'b0}},set_a_axi_en}        ; end
      20'h00108 : begin sys_ack <= sys_en;          sys_rdata <= set_a_axi_start                    ; end
      20'h0010C : begin sys_ack <= sys_en;          sys_rdata <= set_a_axi_stop                     ; end
@@ -447,10 +441,10 @@ end else begin
      20'h00118 : begin sys_ack <= sys_en;          sys_rdata <= set_b_axi_start                    ; end
      20'h0011C : begin sys_ack <= sys_en;          sys_rdata <= set_b_axi_stop                     ; end
 
-     20'h00120 : begin sys_ack <= sys_en;          sys_rdata <= axi_a_err                          ; end
-     20'h00124 : begin sys_ack <= sys_en;          sys_rdata <= axi_a_transf                       ; end
-     20'h00128 : begin sys_ack <= sys_en;          sys_rdata <= axi_b_err                          ; end
-     20'h0012C : begin sys_ack <= sys_en;          sys_rdata <= axi_b_transf                       ; end
+     20'h00120 : begin sys_ack <= sys_en;          sys_rdata <= 32'h0                              ; end
+     20'h00124 : begin sys_ack <= sys_en;          sys_rdata <= 32'h0                              ; end
+     20'h00128 : begin sys_ack <= sys_en;          sys_rdata <= 32'h0                              ; end
+     20'h0012C : begin sys_ack <= sys_en;          sys_rdata <= 32'h0                              ; end
 
      20'h00130 : begin sys_ack <= sys_en;          sys_rdata <= set_a_axi_dec                      ; end
      20'h00134 : begin sys_ack <= sys_en;          sys_rdata <= set_b_axi_dec                      ; end
