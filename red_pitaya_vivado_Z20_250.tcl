@@ -65,6 +65,8 @@ set ::bus_w_bit "16 Bit"
 set ::dram_w_bit "16 Bits"
 
 create_project -part $part -force redpitaya $prj_dir
+# Keep source files as references (no copies under *.srcs/*/imports)
+set_property source_mgmt_mode None [current_project]
 
 ################################################################################
 # create PS BD (processing system block design)

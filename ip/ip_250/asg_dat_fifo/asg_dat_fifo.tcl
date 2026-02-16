@@ -76,6 +76,7 @@ set_property -dict [list \
   CONFIG.Read_Data_Count {true} \
   CONFIG.Read_Data_Count_Width {8} \
   CONFIG.Use_Embedded_Registers {true} \
+  CONFIG.Valid_Flag {true} \
 ] [get_ips asg_dat_fifo]
 
 # Runtime Parameters
@@ -84,4 +85,3 @@ set_property -dict {
 } $asg_dat_fifo
 
 ##################################################################
-

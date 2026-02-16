@@ -41,7 +41,7 @@ localparam AW = 32;
 localparam LW =  4;
 localparam AXI_BURST_LEN      = 16;
 localparam DATA_REQUEST_LEVEL = 128-16;
-localparam FIFO_PRELOAD_SIZE  = 120;
+localparam FIFO_PRELOAD_SIZE  = 240;
 localparam DAT_FIFO_W         = 96;
 
 logic            start_pulse_dac;
@@ -130,13 +130,6 @@ assign dat_fifo_in  = {{(DAT_FIFO_W-DW){1'b0}}, dat_fifo_idata};
 assign dat_fifo_out = dat_fifo_out_full[DW-1:0];
 assign dat_wr_fifo_lvl = '0;
 
-always_ff @(posedge dac_clk_i) begin
-  if (!dac_rstn_i || set_rst_i)
-    dat_rd_valid <= 1'b0;
-  else
-    dat_rd_valid <= dat_fifo_rd;
-end
-
 asg_dat_fifo inst_asg_dat_fifo
 (
   .wr_clk         (axi_sys.clk      ),
@@ -148,6 +141,7 @@ asg_dat_fifo inst_asg_dat_fifo
   .dout           (dat_fifo_out_full),
   .rd_en          (dat_fifo_rd      ),
   .rd_data_count  (dat_rd_fifo_lvl  ),
+  .valid          (dat_rd_valid     ),
   .empty          (dat_fifo_empty   ),
   .wr_rst_busy    (dat_fifo_rst_busy),
   .rd_rst_busy    (                 )
