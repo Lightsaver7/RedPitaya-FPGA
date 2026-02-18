@@ -18,6 +18,8 @@ module axi_master #(
   parameter    LW     =   4      , // length width
   parameter    USE_SZ =   0      , // use sys_size
   parameter    LL     =   0      ,
+  parameter    MAX_RD_OUTSTANDING = 1,
+  parameter    RD_FIFO_AW = 4,
   parameter    SW     = DW >> 3    // strobe width - 1 bit for every data byte
 )
 (
@@ -305,31 +307,28 @@ assign axi_arlock_o  = 2'h0   ; // normal
 assign axi_arcache_o = 4'b0011; // non-cacheable
 assign axi_arprot_o  = 3'b000 ; // data, non-secured, unprivileged
 
-reg [LW-1: 0] rd_cnt  ; // counts data received by system port
-reg           nxt_burst_rdy;
+localparam integer RD_OUT_W = (MAX_RD_OUTSTANDING <= 1) ? 1 : $clog2(MAX_RD_OUTSTANDING + 1);
 
-// system bus provides next address only
-// after the current read burst has finished
+reg [RD_OUT_W-1:0] rd_outstanding_cnt;
+wire               rd_outstanding_full = (rd_outstanding_cnt >= MAX_RD_OUTSTANDING);
+wire               ar_accept = (!axi_arvalid_o || axi_arready_i) && !rd_outstanding_full;
+wire               ar_xfer = axi_arvalid_o && axi_arready_i;
+wire               rlast_xfer = axi_rvalid_i && axi_rready_o && axi_rlast_i;
+
 always @(posedge axi_clk_i)
 begin
    if (!axi_rstn_i) begin
-      nxt_burst_rdy <= 1'b1 ;
-      rd_cnt        <=  'h0 ;
+      rd_outstanding_cnt <= 'h0;
    end
    else begin
-      if (!rd_cnt && sys_rrdy_o && sys_rrdy_i)
-         nxt_burst_rdy <= 1'b1 ;
-      else if (sys_rvalid_i)
-         nxt_burst_rdy <= 1'b0 ;
-
-
-      if (sys_rvalid_i && nxt_burst_rdy)
-         rd_cnt <= sys_rlen_i ;
-      else if (sys_rrdy_i && sys_rrdy_o && rd_cnt)
-         rd_cnt <= rd_cnt - 'h1 ;
+      case ({ar_xfer, rlast_xfer})
+        2'b10: rd_outstanding_cnt <= rd_outstanding_cnt + {{(RD_OUT_W-1){1'b0}}, 1'b1};
+        2'b01: if (rd_outstanding_cnt > 0)
+                 rd_outstanding_cnt <= rd_outstanding_cnt - {{(RD_OUT_W-1){1'b0}}, 1'b1};
+        default: rd_outstanding_cnt <= rd_outstanding_cnt;
+      endcase
    end
 end
-
 
 always @(posedge axi_clk_i)
 begin
@@ -338,7 +337,7 @@ begin
       axi_arburst_o  <= 'h0 ;
    end
    else begin
-      if (sys_rvalid_i && (LL == 1 || nxt_burst_rdy)) begin
+      if (sys_rvalid_i && ar_accept) begin
          axi_arvalid_o  <= 'h1           ;
          axi_rsize      <= sys_rsize_i   ;
          axi_arlen_o    <= sys_rlen_i    ;
@@ -357,10 +356,12 @@ end
 //
 // Read data channel
 
-reg [ 4-1: 0] axi_rwr_pt      ,
-              axi_rrd_pt      ;
-reg [ 4-1: 0] axi_rfill_lvl   ;
-reg [DW-1: 0] axi_rfifo[15:0] ;  //synthesis attribute ram_style of axi_rfifo is "distributed";
+localparam integer RD_FIFO_DEPTH = (1 << RD_FIFO_AW);
+
+reg [RD_FIFO_AW-1:0] axi_rwr_pt,
+                     axi_rrd_pt;
+reg [RD_FIFO_AW:0]   axi_rfill_lvl;
+reg [DW-1: 0] axi_rfifo[RD_FIFO_DEPTH-1:0] ;  //synthesis attribute ram_style of axi_rfifo is "distributed";
 reg           rdata_in_reg    ;
 
 wire axi_rpush = axi_rvalid_i && axi_rready_o ;
@@ -369,17 +370,17 @@ wire axi_rpop  = (!rdata_in_reg || sys_rrdy_i) && |axi_rfill_lvl ;
 always @(posedge axi_clk_i)
 begin
    if (!axi_rstn_i) begin
-      axi_rwr_pt <= 4'h0 ;
-      axi_rrd_pt <= 4'h0 ;
+      axi_rwr_pt <= 'h0 ;
+      axi_rrd_pt <= 'h0 ;
    end
    else begin
       if (axi_rpush) begin
          axi_rfifo[axi_rwr_pt] <= axi_rdata_i         ;
-         axi_rwr_pt            <= axi_rwr_pt + 4'h1   ;
+         axi_rwr_pt            <= axi_rwr_pt + 1'b1   ;
       end
       if (axi_rpop) begin
          sys_rdata_o <= axi_rfifo[axi_rrd_pt]  ;
-         axi_rrd_pt <= axi_rrd_pt + 4'h1       ;
+         axi_rrd_pt <= axi_rrd_pt + 1'b1       ;
       end
    end
 end
@@ -437,7 +438,7 @@ end
 
 
 
-assign sys_rardy_o = axi_arready_i ;
+assign sys_rardy_o = ar_accept ;
 
 
 

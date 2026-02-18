@@ -238,7 +238,9 @@ axi_master #(
   .AW    (  32    ), // address width
   .ID    (   3    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW    (   4    ), // master ID width
-  .LW    (   4    )  // length width
+  .LW    (   4    ), // length width
+  .MAX_RD_OUTSTANDING (4),
+  .RD_FIFO_AW         (6)
 ) axi_master_2 (
    // global signals
   .axi_clk_i      ( hp2_saxi.ACLK   ), // global clock
@@ -313,7 +315,9 @@ axi_master #(
   .AW    (  32    ), // address width
   .ID    (   4    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW    (   4    ), // master ID width
-  .LW    (   4    )  // length width
+  .LW    (   4    ), // length width
+  .MAX_RD_OUTSTANDING (4),
+  .RD_FIFO_AW         (6)
 ) axi_master_3 (
    // global signals
   .axi_clk_i      ( hp3_saxi.ACLK   ), // global clock

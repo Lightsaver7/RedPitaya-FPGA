@@ -447,4 +447,29 @@ rp_asg_axi #(
   .axi_last_pre_o  ( axi_last_pre      )
 );
 
+//---------------------------------------------------------------------------------
+//
+//  ILA debug (dac_clk_i domain)
+
+// ila_1 i_ila_asg_ch (
+//   .clk    (dac_clk_i),
+//   .probe0 (trig_in),          // [1]
+//   .probe1 (trig_sw_i),        // [1]
+//   .probe2 (trig_ext_i),       // [1]
+//   .probe3 (dac_trig),         // [1]
+//   .probe4 (dac_do),           // [1]
+//   .probe5 (dac_rep),          // [1]
+//   .probe6 (buf_cycle),        // [1]
+//   .probe7 (dac_pnt),          // [62]
+//   .probe8 (set_step_i),       // [32]
+//   .probe9 (set_step_lo_i),    // [32]
+//   .probe10(set_size_i),       // [30]
+//   .probe11(set_ofs_i),        // [32]
+//   .probe12(axi_state_o),      // [20]
+//   .probe13(axi_last),         // [1]
+//   .probe14(axi_last_pre),     // [1]
+//   .probe15(out_sel),          // [5]
+//   .probe16(dac_o)             // [14]
+// );
+
 endmodule
