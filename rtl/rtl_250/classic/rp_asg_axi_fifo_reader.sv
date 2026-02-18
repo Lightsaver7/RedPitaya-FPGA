@@ -62,6 +62,7 @@ logic [AW-1:0] words_left_q;
 logic          last_pulse;
 logic          last_pre_pulse;
 logic [31:0]   dec_cnt_q;
+logic [31:0]   dec_cnt_d;
 logic [31:0]   dec_safe;
 logic          dec_step;
 logic [15:0]   cycle_cnt_q;
@@ -113,16 +114,23 @@ logic [31:0]   axi_dec_use;
 //
 //  Trig sync
 
-logic trig_r;
+logic trig_sync_q;
+logic trig_sync_d1_q;
+logic trig_sync_d2_q;
 
 always_ff @(posedge dac_clk_i) begin
-  if (!dac_rstn_i || set_rst_i)
-    trig_r <= 1'b0;
-  else
-    trig_r <= trig_i;
+  if (!dac_rstn_i || set_rst_i) begin
+    trig_sync_q <= 1'b0;
+    trig_sync_d1_q <= 1'b0;
+    trig_sync_d2_q <= 1'b0;
+  end else begin
+    trig_sync_q <= trig_i;
+    trig_sync_d1_q <= trig_sync_q;
+    trig_sync_d2_q <= trig_sync_d1_q;
+  end
 end
 
-assign trig_edge = trig_i & ~trig_r;
+assign trig_edge = trig_sync_d1_q & ~trig_sync_d2_q;
 assign repeat_req = repeat_i && set_axi_en_i;
 
 always_ff @(posedge dac_clk_i) begin
@@ -336,20 +344,22 @@ assign consume_word = output_valid && dec_step && (sample_index == (NUM_SAMPS-1)
 assign cycle_done  = consume_word && (words_left_q == {{(AW-1){1'b0}},1'b1});
 assign stop_cycle  = cycle_done && (cycle_cnt_q == 16'h1) && !(trig_req || repeat_req);
 
+always_comb begin
+  dec_cnt_d = dec_cnt_q;
+  if (set_rst_i || cycle_reload || !output_valid) begin
+    dec_cnt_d = 32'h1;
+  end else if (dec_cnt_q < dec_safe) begin
+    dec_cnt_d = dec_cnt_q + 1'b1;
+  end else begin
+    dec_cnt_d = 32'h1;
+  end
+end
+
 always_ff @(posedge dac_clk_i) begin
-  if (!dac_rstn_i || set_rst_i) begin
-    dec_cnt_q <= 32'h1;
-  end else if (cycle_reload) begin
+  if (!dac_rstn_i) begin
     dec_cnt_q <= 32'h1;
   end else begin
-    if (output_valid) begin
-      if (dec_cnt_q < dec_safe)
-        dec_cnt_q <= dec_cnt_q + 1;
-      else
-        dec_cnt_q <= 32'h1;
-    end else begin
-      dec_cnt_q <= 32'h1;
-    end
+    dec_cnt_q <= dec_cnt_d;
   end
 end
 
