@@ -135,6 +135,18 @@ wire              sys_en        ;
 wire [   32-1: 0] adc_state_rd   ;
 wire [   32-1: 0] trg_state_rd   ;
 
+function [DW-1:0] cfg_decode_trig_level;
+  input [31:0] wdata;
+  input        hres_en;
+  reg signed [DW-1:0] base_14;
+begin
+  // Threshold/hysteresis are configured in legacy 14-bit units.
+  // In hires mode, scale to match decimator output (x4).
+  base_14 = {{(DW-14){wdata[13]}}, wdata[13:0]};
+  cfg_decode_trig_level = hres_en ? ($signed(base_14) <<< 2) : base_14;
+end
+endfunction
+
 assign adc_state_rd = (CHN == 0) ? {adc_state_ext_i, adc_state_i[15:0]} : {adc_state_i[15:0], adc_state_ext_i};
 assign trg_state_rd = (CHN == 0) ? {trg_state_ext_i, trg_state_i[15:0]} : {trg_state_i[15:0], trg_state_ext_i};
 
@@ -284,12 +296,12 @@ if (adc_rstn_i == 1'b0) begin
   set_axi_en             <=  4'h0           ;
 end else begin
   if (sys_wen) begin
-    if (sys_addr[19:0]==20'h08 )   set_tresh[DW*1-1:DW*0]     <= sys_wdata[DW-1:0] ;
-    if (sys_addr[19:0]==20'h0C )   set_tresh[DW*2-1:DW*1]     <= sys_wdata[DW-1:0] ;
+    if (sys_addr[19:0]==20'h08 )   set_tresh[DW*1-1:DW*0]     <= cfg_decode_trig_level(sys_wdata, set_hres_en[0]) ;
+    if (sys_addr[19:0]==20'h0C )   set_tresh[DW*2-1:DW*1]     <= cfg_decode_trig_level(sys_wdata, set_hres_en[1]) ;
     if (sys_addr[19:0]==20'h10 )   set_dly[32*1-1:32*0]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h14 )   set_dec[17*1-1:17*0]       <= sys_wdata[17-1:0] ;
-    if (sys_addr[19:0]==20'h20 )   set_hyst[DW*1-1:DW*0]      <= sys_wdata[DW-1:0] ;
-    if (sys_addr[19:0]==20'h24 )   set_hyst[DW*2-1:DW*1]      <= sys_wdata[DW-1:0] ;
+    if (sys_addr[19:0]==20'h20 )   set_hyst[DW*1-1:DW*0]      <= cfg_decode_trig_level(sys_wdata, set_hres_en[0]) ;
+    if (sys_addr[19:0]==20'h24 )   set_hyst[DW*2-1:DW*1]      <= cfg_decode_trig_level(sys_wdata, set_hres_en[1]) ;
 
     if (sys_addr[19:0]==20'h30 )   set_filt_aa[18*1-1:18*0]   <= sys_wdata[18-1:0] ;
     if (sys_addr[19:0]==20'h34 )   set_filt_bb[25*1-1:25*0]   <= sys_wdata[25-1:0] ;
