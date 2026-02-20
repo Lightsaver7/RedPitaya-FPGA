@@ -7,7 +7,7 @@
 
 module rp_decim_tb #(
   realtime TP = 8.0ns,  // 125MHz
-  int unsigned DW = 14
+  int unsigned DW = 16
 );
 
 // DUT I/O
@@ -16,6 +16,7 @@ logic                adc_rstn_i;
 logic [DW-1:0]       dec_dat_i;
 logic [17-1:0]       set_dec_i;
 logic                set_avg_en_i;
+logic                set_bs_en_i;
 logic                adc_arm_do_i;
 logic                dec_val_o;
 logic [DW-1:0]       dec_dat_o;
@@ -45,13 +46,15 @@ end
 
 task automatic reset_dut(
   input int unsigned dec,
-  input bit avg_en
+  input bit avg_en,
+  input bit bs_en
 );
 begin
   adc_rstn_i    <= 1'b0;
   dec_dat_i     <= '0;
   set_dec_i     <= dec[16:0];
   set_avg_en_i  <= avg_en;
+  set_bs_en_i   <= bs_en;
   adc_arm_do_i  <= 1'b0;
   repeat (4) @(posedge adc_clk_i);
   adc_rstn_i <= 1'b1;
@@ -94,6 +97,16 @@ begin
 end
 endfunction
 
+function automatic int signed apply_bs_scale(
+  input int signed dat,
+  input bit bs_en
+);
+begin
+  if (bs_en)  apply_bs_scale = trunc_dw(dat <<< 2);
+  else        apply_bs_scale = trunc_dw(dat);
+end
+endfunction
+
 function automatic logic [DW-1:0] sample_bits(input int unsigned idx);
   logic signed [DW-1:0] tmp;
 begin
@@ -117,6 +130,7 @@ endfunction
 task automatic build_expected(
   input int unsigned dec,
   input bit avg_en,
+  input bit bs_en,
   input int unsigned n_samples,
   output int signed expected[$]
 );
@@ -128,22 +142,27 @@ begin
   expected = {};
   sh = log2_pow2(dec);
 
-  if (!avg_en) begin
+  if (dec == 0) begin
+    // With dec=0, dec_valid is always asserted and pass-through path is used.
+    for (i = 0; i < n_samples; i++) begin
+      expected.push_back(apply_bs_scale(sample_pattern(i), bs_en));
+    end
+  end else if (!avg_en) begin
     for (i = dec; i < n_samples; i += dec) begin
-      expected.push_back(sample_pattern(i));
+      expected.push_back(apply_bs_scale(sample_pattern(i), bs_en));
     end
   end else begin
     case (dec)
       1: begin
         for (i = 1; i < n_samples; i++) begin
-          expected.push_back(sample_pattern(i-1));
+          expected.push_back(apply_bs_scale(sample_pattern(i-1), bs_en));
         end
       end
       2, 4, 8: begin
         for (i = dec; i < n_samples; i += dec) begin
           sum = 0;
           for (j = i - dec; j < i; j++) begin
-            sum += sample_pattern(j);
+            sum += apply_bs_scale(sample_pattern(j), bs_en);
           end
           expected.push_back(trunc_dw(sum >>> sh));
         end
@@ -151,7 +170,7 @@ begin
       3, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15: begin
         // In RTL this range falls back to non-averaged decimation path.
         for (i = dec; i < n_samples; i += dec) begin
-          expected.push_back(sample_pattern(i));
+          expected.push_back(apply_bs_scale(sample_pattern(i), bs_en));
         end
       end
       default: begin
@@ -160,7 +179,7 @@ begin
         for (i = dec; i < n_samples; i += dec) begin
           sum = 0;
           for (j = i - dec; j < i; j++) begin
-            sum += sample_pattern(j);
+            sum += apply_bs_scale(sample_pattern(j), bs_en);
           end
           expected.push_back(trunc_dw(sum / $signed(dec)));
         end
@@ -174,6 +193,7 @@ task automatic run_case(
   input string name,
   input int unsigned dec,
   input bit avg_en,
+  input bit bs_en,
   input int unsigned n_samples
 );
   int signed expected[$];
@@ -182,12 +202,12 @@ task automatic run_case(
   int unsigned wait_cycles;
   int unsigned errors_before;
 begin
-  $display("CASE START: %s (dec=%0d avg=%0d samples=%0d)", name, dec, avg_en, n_samples);
+  $display("CASE START: %s (dec=%0d avg=%0d bs=%0d samples=%0d)", name, dec, avg_en, bs_en, n_samples);
   errors_before = errors;
 
-  reset_dut(dec, avg_en);
+  reset_dut(dec, avg_en, bs_en);
 
-  build_expected(dec, avg_en, n_samples, expected);
+  build_expected(dec, avg_en, bs_en, n_samples, expected);
 
   // Feed deterministic samples.
   for (i = 0; i < n_samples; i++) begin
@@ -243,18 +263,28 @@ endtask
 //------------------------------------------------------------------------------
 
 initial begin
-  run_case("avg_off_dec1",  1, 1'b0, 128);
-  run_case("avg_off_dec2",  2, 1'b0, 128);
-  run_case("avg_off_dec3",  3, 1'b0, 128);
-  run_case("avg_off_dec4",  4, 1'b0, 128);
-  run_case("avg_off_dec5",  5, 1'b0, 128);
-  run_case("avg_off_dec8",  8, 1'b0, 128);
-  run_case("avg_on_dec1",   1, 1'b1, 128);
-  run_case("avg_on_dec2",   2, 1'b1, 128);
-  run_case("avg_on_dec4",   4, 1'b1, 128);
-  run_case("avg_on_dec8",   8, 1'b1, 128);
-  run_case("avg_on_dec3_fallback", 3, 1'b1, 128);
-  run_case("avg_on_dec64_divider", 64, 1'b1, 512);
+  run_case("avg_off_dec0",            0, 1'b0, 1'b0, 128);
+  run_case("avg_off_dec1",            1, 1'b0, 1'b0, 128);
+  run_case("avg_off_dec2",            2, 1'b0, 1'b0, 128);
+  run_case("avg_off_dec3",            3, 1'b0, 1'b0, 128);
+  run_case("avg_off_dec4",            4, 1'b0, 1'b0, 128);
+  run_case("avg_off_dec5",            5, 1'b0, 1'b0, 128);
+  run_case("avg_off_dec8",            8, 1'b0, 1'b0, 128);
+  run_case("avg_on_dec1",             1, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec2",             2, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec4",             4, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec8",             8, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec3_fallback",    3, 1'b1, 1'b0, 128);
+  run_case("avg_on_dec17_divider",   17, 1'b1, 1'b0, 256);
+  run_case("avg_on_dec64_divider",   64, 1'b1, 1'b0, 512);
+
+  // beamshadow precision enabled
+  run_case("bs_on_avg_off_dec1",      1, 1'b0, 1'b1, 128);
+  run_case("bs_on_avg_off_dec4",      4, 1'b0, 1'b1, 128);
+  run_case("bs_on_avg_on_dec2",       2, 1'b1, 1'b1, 128);
+  run_case("bs_on_avg_on_dec8",       8, 1'b1, 1'b1, 128);
+  run_case("bs_on_avg_on_dec3_fallback", 3, 1'b1, 1'b1, 128);
+  run_case("bs_on_avg_on_dec64_divider", 64, 1'b1, 1'b1, 512);
 
   if (errors == 0)  $display("SUCCESS: rp_decim_tb");
   else              $display("FAILURE: rp_decim_tb errors=%0d", errors);
@@ -274,6 +304,7 @@ rp_decim #(
   .dec_dat_i    (dec_dat_i   ),
   .set_dec_i    (set_dec_i   ),
   .set_avg_en_i (set_avg_en_i),
+  .set_bs_en_i  (set_bs_en_i ),
   .adc_arm_do_i (adc_arm_do_i),
   .dec_val_o    (dec_val_o   ),
   .dec_dat_o    (dec_dat_o   )

@@ -117,6 +117,7 @@ wire [   4*32 -1: 0] set_adc_dly       ;
 wire [   4*17 -1: 0] set_dec           ;
 wire [   4*DW -1: 0] set_hyst          ;
 wire [       4-1: 0] set_avg_en        ;
+wire [       4-1: 0] set_hres_en         ;
 wire [   4*18 -1: 0] set_filt_aa       ;
 wire [   4*25 -1: 0] set_filt_bb       ;
 wire [   4*25 -1: 0] set_filt_kk       ;
@@ -248,7 +249,7 @@ osc_filter #(
 assign adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
 rp_decim #(
-  .DW  (  DW    )
+  .DW      (  DW          )
 ) i_dec (
    // global signals
   .adc_clk_i    ( adc_clk_i[GV]  ),  // ADC clock
@@ -258,6 +259,7 @@ rp_decim #(
   .dec_dat_i    ( adc_dec_in                 ),  // data in
   .set_dec_i    ( set_dec[(GV+1)*17-1:GV*17] ),  // decimation
   .set_avg_en_i ( set_avg_en[GV]             ),  // averaging enable
+  .set_hres_en_i  ( set_hres_en[GV]              ),  // high-resolution precision enable
   .adc_arm_do_i ( adc_arm_do[GV]             ),
 
   .dec_val_o    ( dec_val       ),
@@ -526,6 +528,7 @@ rp_scope_cfg #(
   .set_dec_o          ( set_dec         ),
   .set_hyst_o         ( set_hyst        ),
   .set_avg_en_o       ( set_avg_en      ),
+  .set_hres_en_o        ( set_hres_en       ),
   .set_filt_aa_o      ( set_filt_aa     ),
   .set_filt_bb_o      ( set_filt_bb     ),
   .set_filt_kk_o      ( set_filt_kk     ),
