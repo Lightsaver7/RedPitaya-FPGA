@@ -27,11 +27,14 @@ module rp_decim #(
    input      [DW-1: 0] dec_dat_i       ,  // filtered data input
    input      [17-1: 0] set_dec_i       ,  // decimation value
    input                set_avg_en_i    ,  // averaging enable
+   input                set_hres_en_i     ,  // high-resolution precision enable
    input                adc_arm_do_i    ,  // trigger armed
 
    output               dec_val_o       ,  // decimated data valid
    output     [DW-1: 0] dec_dat_o          // decimated data
 );
+
+localparam integer HRES_SHL = 2;
 
 //---------------------------------------------------------------------------------
 //  Decimate input data
@@ -123,6 +126,8 @@ end else begin
 end
 
 wire dec_valid = (adc_dec_cnt >= set_dec_i);
+wire hres_active = set_hres_en_i;
+wire signed [DW-1:0] dec_dat_hres = hres_active ? ($signed(dec_dat_i) <<< HRES_SHL) : $signed(dec_dat_i);
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
@@ -132,14 +137,14 @@ if (adc_rstn_i == 1'b0) begin
 end else begin
    if (dec_valid || adc_arm_do_i) begin // start again or arm
       adc_dec_cnt <= 17'h1    ;              
-      adc_sum   <= $signed(dec_dat_i) ;
+      adc_sum   <= $signed(dec_dat_hres) ;
    end else begin
       adc_dec_cnt <= adc_dec_cnt + 17'h1 ;
-      adc_sum   <= $signed(adc_sum) + $signed(dec_dat_i) ;
+      adc_sum   <= $signed(adc_sum) + $signed(dec_dat_hres) ;
    end
 
    case (set_dec_i & {17{set_avg_en_i}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
-      17'h0     : begin adc_dat <= dec_dat_i;          adc_dv <= dec_valid;  end // if averaging is disabled
+      17'h0     : begin adc_dat <= dec_dat_hres;         adc_dv <= dec_valid;  end // if averaging is disabled
       17'h1     : begin adc_dat <= adc_sum[15+0 :  0]; adc_dv <= dec_valid;  end
       17'h2     : begin adc_dat <= adc_sum[15+1 :  1]; adc_dv <= dec_valid;  end
       17'h4     : begin adc_dat <= adc_sum[15+2 :  2]; adc_dv <= dec_valid;  end
@@ -154,7 +159,7 @@ end else begin
       17'd12, 
       17'd13, 
       17'd14, 
-      17'd15    : begin adc_dat <= dec_dat_i; adc_dv <= dec_valid;  end // no division for any other decimation factor
+      17'd15    : begin adc_dat <= dec_dat_hres; adc_dv <= dec_valid;  end // no division for any other decimation factor
       default   : begin adc_dat <= dat_div;   adc_dv <= adc_dv_div; end
    endcase
 end

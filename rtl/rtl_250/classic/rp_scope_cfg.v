@@ -70,6 +70,7 @@ module rp_scope_cfg #(
    output     [   4*17 -1: 0] set_dec_o            ,
    output     [   4*DW -1: 0] set_hyst_o           ,
    output     [       4-1: 0] set_avg_en_o         ,
+   output     [       4-1: 0] set_hres_en_o          ,
    output     [   4*18 -1: 0] set_filt_aa_o        ,
    output     [   4*25 -1: 0] set_filt_bb_o        ,
    output     [   4*25 -1: 0] set_filt_kk_o        ,
@@ -109,6 +110,7 @@ reg  [ 4*32-1: 0] set_dly       ;
 reg  [ 4*17-1: 0] set_dec       ;
 reg  [ 4*DW-1: 0] set_hyst      ;
 reg  [    4-1: 0] set_avg_en    ;
+reg  [    4-1: 0] set_hres_en     ;
 wire [ 4*4 -1: 0] trg_src       ;
 
 
@@ -182,6 +184,7 @@ always @(posedge adc_clk_i) begin
     trig_dis_clr[GV] <= 1'b0 ;
     indep_mode[GV]   <= 1'b0 ;
     set_avg_en[GV]   <= 1'b0 ;
+    set_hres_en[GV]    <= 1'b0 ;
   end else begin
     adc_arm_do[GV]   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_dats[0] ; // SW ARM
     adc_rst_do[GV]   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_dats[1] ; // reset
@@ -191,6 +194,7 @@ always @(posedge adc_clk_i) begin
       if (sys_addr[19:0]==20'h0  && |sys_dats)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
       if (sys_addr[19:0]==20'h0  && |sys_dats)  indep_mode[GV]   <= sys_dats[5]   ; // independent acq mode
       if (sys_addr[19:0]==20'h28             )  set_avg_en[GV]   <= sys_dats[0]   ; // averaging enable
+      if (sys_addr[19:0]==20'h28             )  set_hres_en[GV]    <= sys_dats[1]   ; // high-resolution precision enable
     end
   end
 end
@@ -210,6 +214,7 @@ wire [ 4*32-1: 0] set_dly_x       ;
 wire [ 4*17-1: 0] set_dec_x       ;
 wire [    4-1: 0] set_dec1_x      ;
 wire [    4-1: 0] set_avg_en_x    ;
+wire [    4-1: 0] set_hres_en_x     ;
 
 
 genvar GL;
@@ -228,6 +233,7 @@ if (GL == 0) begin
   assign set_dec_x[(GL+1)*17-1:GL*17] = set_dec[(GL+1)*17-1:GL*17] ;
   assign set_dec1_x[GL]               = set_dec1[GL]               ;
   assign set_avg_en_x[GL]             = set_avg_en[GL]             ;
+  assign set_hres_en_x[GL]              = set_hres_en[GL]              ;
 end else begin
   assign adc_arm_do_x[GL]             = indep_mode[GL] ? adc_arm_do[GL]             : adc_arm_do[0]   ;
   assign adc_rst_do_x[GL]             = indep_mode[GL] ? adc_rst_do[GL]             : adc_rst_do[0]   ;
@@ -240,6 +246,7 @@ end else begin
   assign set_dec_x[(GL+1)*17-1:GL*17] = indep_mode[GL] ? set_dec[(GL+1)*17-1:GL*17] : set_dec[17-1: 0];
   assign set_dec1_x[GL]               = indep_mode[GL] ? set_dec1[GL]               : set_dec1[0]     ;
   assign set_avg_en_x[GL]             = indep_mode[GL] ? set_avg_en[GL]             : set_avg_en[0]   ;
+  assign set_hres_en_x[GL]            = indep_mode[GL] ? set_hres_en[GL]            : set_hres_en[0]  ;
 end
 
 end
@@ -363,10 +370,10 @@ end else begin
     20'h00020 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_hyst[DW*1-1:DW*0]}          ; end
     20'h00024 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_hyst[DW*2-1:DW*1]}          ; end
 
-    20'h00028 : begin sys_ack <= sys_en;          sys_rdata <= {{ 8- 1{1'b0}},  set_avg_en[3],
-                                                                { 8- 1{1'b0}},  set_avg_en[2],
-                                                                { 8- 1{1'b0}},  set_avg_en[1],
-                                                                { 8- 1{1'b0}},  set_avg_en[0]}                  ; end
+    20'h00028 : begin sys_ack <= sys_en;          sys_rdata <= {6'h0, set_hres_en[3], set_avg_en[3],
+                                                                6'h0, set_hres_en[2], set_avg_en[2],
+                                                                6'h0, set_hres_en[1], set_avg_en[1],
+                                                                6'h0, set_hres_en[0], set_avg_en[0]}              ; end
 
     20'h0002C : begin sys_ack <= sys_en;          sys_rdata <=                  adc_we_cnt_i[32*1-1:32*0]       ; end
 
@@ -450,6 +457,7 @@ assign set_dly_o             = set_dly_x       ;
 assign set_dec_o             = set_dec_x       ;
 assign set_hyst_o            = set_hyst        ;
 assign set_avg_en_o          = set_avg_en_x    ;
+assign set_hres_en_o           = set_hres_en_x     ;
 assign set_filt_aa_o         = set_filt_aa     ;
 assign set_filt_bb_o         = set_filt_bb     ;
 assign set_filt_kk_o         = set_filt_kk     ;
