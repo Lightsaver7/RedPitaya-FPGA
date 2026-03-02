@@ -387,7 +387,7 @@ reg  [ 20-1: 0] ext_trig_debp  ;
 reg  [ 20-1: 0] ext_trig_debn  ;
 
 always @(posedge dac_clk_i) begin
-   if (dac_rstn_i == 1'b0 || set_rst_i) begin
+   if (dac_rstn_i == 1'b0) begin
       ext_trig_in   <=  3'h0 ;
       ext_trig_dp   <=  2'h0 ;
       ext_trig_dn   <=  2'h0 ;
