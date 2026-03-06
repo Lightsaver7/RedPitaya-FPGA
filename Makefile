@@ -11,6 +11,7 @@ RAM   ?= 512
 HWID  ?= ""
 DEFINES ?= ""
 DTS_VER ?= 2025.1
+DTS_IP_PATH ?= dts
 VIVADO_OPTS ?=
 PROJECT_DIRS := $(wildcard prj/*)
 PROJECT_NAMES := $(notdir $(PROJECT_DIRS))
@@ -86,6 +87,12 @@ ifeq ($(PRJ),barebones)
     endif
 endif
 
+ifeq ($(PRJ),stream_app)
+    ifeq ($(FPGA_VERSION),z20_125_4ch)
+        DTS_IP_PATH := dts_4ch
+    endif
+endif
+
 $(DEVICE_TREE): $(XSA)
 	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER) MODEL=$(MODEL)
 
@@ -104,7 +111,7 @@ endif
 	if [ -f "$$PL_PATH" ]; then \
 		sed -i 's/.bin/fpga.bin/g' $$PL_PATH; \
 		grep -qxF '/include/ "pl_patch.dtsi"' $$PL_PATH || echo '/include/ "pl_patch.dtsi"' >> $$PL_PATH; \
-		dtc -I dts -O dtb -i prj/$(PRJ)/dts -o prj/$(PRJ)/out/fpga.dtbo $$PL_PATH; \
+		dtc -I dts -O dtb -i prj/$(PRJ)/$(DTS_IP_PATH) -o prj/$(PRJ)/out/fpga.dtbo $$PL_PATH; \
 		dtc -I dtb -O dts --sort -o prj/$(PRJ)/out/fpga.dtso prj/$(PRJ)/out/fpga.dtbo; \
     else \
         echo "Missing pl.dtsi [SKIP]"; \
