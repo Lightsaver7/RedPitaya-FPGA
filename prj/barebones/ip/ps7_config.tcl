@@ -445,8 +445,5 @@ proc configure_ps7 {ps_instance} {
         CONFIG.PCW_S_AXI_HP2_ID_WIDTH {4} \
         CONFIG.PCW_S_AXI_HP3_DATA_WIDTH {64} \
         CONFIG.PCW_S_AXI_HP3_ID_WIDTH {4} \
-        CONFIG.PCW_DDR_PORT2_HPR_ENABLE {1} \
-        CONFIG.PCW_DDR_PRIORITY_READPORT_2 {High} \
-        CONFIG.PCW_UIPARAM_DDR_ADV_ENABLE {1} \
     ] $ps_instance
 }
