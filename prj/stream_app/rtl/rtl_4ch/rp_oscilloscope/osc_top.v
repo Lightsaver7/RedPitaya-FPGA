@@ -40,6 +40,7 @@ module osc_top
   input  wire [    DEC_CNT_BITS-1:0]      cfg_dec_factor_i        ,
   input  wire [  DEC_SHIFT_BITS-1:0]      cfg_dec_rshift_i        ,
   input  wire                             cfg_avg_en_i            ,
+  input  wire                             cfg_hres_en_i           ,
   input  wire [               3-1:0]      cfg_loopback_i          ,
   input  wire                             cfg_8bit_dat_i          ,
   input  wire [              16-1:0]      cfg_calib_offset_i      ,
@@ -271,6 +272,10 @@ osc_calib #(
 ////////////////////////////////////////////////////////////
 assign dec_indata = ramp_en      ? ramp_sig     : 
                    (loopback_dac ? s_axis_tdata : calib_tdata);    
+wire signed [S_AXIS_DATA_BITS-1:0] trig_low_level =
+  cfg_hres_en_i ? ($signed(cfg_trig_low_level_i) <<< 2) : $signed(cfg_trig_low_level_i);
+wire signed [S_AXIS_DATA_BITS-1:0] trig_high_level =
+  cfg_hres_en_i ? ($signed(cfg_trig_high_level_i) <<< 2) : $signed(cfg_trig_high_level_i);
 
 osc_decimator #(
   .AXIS_DATA_BITS (S_AXIS_DATA_BITS), 
@@ -287,6 +292,7 @@ osc_decimator #(
   .m_axis_tready  (dec_tready),      
   .ctl_rst        (event_num_reset),                                                                     
   .cfg_avg_en     (cfg_avg_en_i),            
+  .cfg_hres_en    (cfg_hres_en_i),
   .cfg_dec_factor (cfg_dec_factor_i),        
   .cfg_dec_rshift (cfg_dec_rshift_i));       
 
@@ -302,8 +308,8 @@ osc_trigger #(
   .clk                  (clk_adc),                         
   .rst_n                (rstn_trg),                                                    
   .ctl_rst              (event_num_reset),                                                    
-  .cfg_trig_low_level   (cfg_trig_low_level_i),          
-  .cfg_trig_high_level  (cfg_trig_high_level_i),         
+  .cfg_trig_low_level   (trig_low_level),          
+  .cfg_trig_high_level  (trig_high_level),         
   .cfg_trig_edge        (cfg_trig_edge_i),                                                 
   .trig                 (trig_op),                                                    
   .s_axis_tdata         (dec_tdata),                

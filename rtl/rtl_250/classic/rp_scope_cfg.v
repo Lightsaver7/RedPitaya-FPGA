@@ -106,9 +106,11 @@ wire [    4-1: 0] filt_rstn     ;
 wire [    4-1: 0] filt_coef_adr ;
 
 reg  [ 4*DW-1: 0] set_tresh     ;
+reg  [ 4*DW-1: 0] set_tresh_raw ;
 reg  [ 4*32-1: 0] set_dly       ;
 reg  [ 4*17-1: 0] set_dec       ;
 reg  [ 4*DW-1: 0] set_hyst      ;
+reg  [ 4*DW-1: 0] set_hyst_raw  ;
 reg  [    4-1: 0] set_avg_en    ;
 reg  [    4-1: 0] set_hres_en     ;
 wire [ 4*4 -1: 0] trg_src       ;
@@ -136,14 +138,11 @@ wire [   32-1: 0] adc_state_rd   ;
 wire [   32-1: 0] trg_state_rd   ;
 
 function [DW-1:0] cfg_decode_trig_level;
-  input [31:0] wdata;
-  input        hres_en;
-  reg signed [DW-1:0] base_14;
+  input [DW-1:0] raw_level;
+  input          hres_en;
 begin
-  // Threshold/hysteresis are configured in legacy 14-bit units.
-  // In hires mode, scale to match decimator output (x4).
-  base_14 = {{(DW-14){wdata[13]}}, wdata[13:0]};
-  cfg_decode_trig_level = hres_en ? ($signed(base_14) <<< 2) : base_14;
+  // For 250 (12-bit ADC), hires scales decimator output by x16.
+  cfg_decode_trig_level = hres_en ? ($signed(raw_level) <<< 4) : raw_level;
 end
 endfunction
 
@@ -271,6 +270,10 @@ if (adc_rstn_i == 1'b0) begin
   set_tresh[DW*2-1:DW*1] <= -'d5000         ;
   set_tresh[DW*3-1:DW*2] <=  'd5000         ;
   set_tresh[DW*4-1:DW*3] <= -'d5000         ;
+  set_tresh_raw[DW*1-1:DW*0] <=  'd5000     ;
+  set_tresh_raw[DW*2-1:DW*1] <= -'d5000     ;
+  set_tresh_raw[DW*3-1:DW*2] <=  'd5000     ;
+  set_tresh_raw[DW*4-1:DW*3] <= -'d5000     ;
 
   set_dly                <= {4{32'd0}}      ;
   set_dec                <= {4{17'd1}}      ;
@@ -278,6 +281,10 @@ if (adc_rstn_i == 1'b0) begin
   set_hyst[DW*2-1:DW*1]  <= 'd20            ;
   set_hyst[DW*3-1:DW*2]  <= 'd20            ;
   set_hyst[DW*4-1:DW*3]  <= 'd20            ;
+  set_hyst_raw[DW*1-1:DW*0] <= 'd20         ;
+  set_hyst_raw[DW*2-1:DW*1] <= 'd20         ;
+  set_hyst_raw[DW*3-1:DW*2] <= 'd20         ;
+  set_hyst_raw[DW*4-1:DW*3] <= 'd20         ;
 
   set_filt_aa            <= {4{18'h0}}      ;
   set_filt_bb            <= {4{25'h0}}      ;
@@ -295,13 +302,22 @@ if (adc_rstn_i == 1'b0) begin
   set_axi_dly            <= {4{32'd0}}      ;
   set_axi_en             <=  4'h0           ;
 end else begin
+  set_tresh[DW*1-1:DW*0] <= cfg_decode_trig_level(set_tresh_raw[DW*1-1:DW*0], set_hres_en[0]);
+  set_tresh[DW*2-1:DW*1] <= cfg_decode_trig_level(set_tresh_raw[DW*2-1:DW*1], set_hres_en[1]);
+  set_tresh[DW*3-1:DW*2] <= cfg_decode_trig_level(set_tresh_raw[DW*3-1:DW*2], set_hres_en[2]);
+  set_tresh[DW*4-1:DW*3] <= cfg_decode_trig_level(set_tresh_raw[DW*4-1:DW*3], set_hres_en[3]);
+  set_hyst [DW*1-1:DW*0] <= cfg_decode_trig_level(set_hyst_raw [DW*1-1:DW*0], set_hres_en[0]);
+  set_hyst [DW*2-1:DW*1] <= cfg_decode_trig_level(set_hyst_raw [DW*2-1:DW*1], set_hres_en[1]);
+  set_hyst [DW*3-1:DW*2] <= cfg_decode_trig_level(set_hyst_raw [DW*3-1:DW*2], set_hres_en[2]);
+  set_hyst [DW*4-1:DW*3] <= cfg_decode_trig_level(set_hyst_raw [DW*4-1:DW*3], set_hres_en[3]);
+
   if (sys_wen) begin
-    if (sys_addr[19:0]==20'h08 )   set_tresh[DW*1-1:DW*0]     <= cfg_decode_trig_level(sys_wdata, set_hres_en[0]) ;
-    if (sys_addr[19:0]==20'h0C )   set_tresh[DW*2-1:DW*1]     <= cfg_decode_trig_level(sys_wdata, set_hres_en[1]) ;
+    if (sys_addr[19:0]==20'h08 )   set_tresh_raw[DW*1-1:DW*0] <= $signed(sys_wdata[11:0]) ;
+    if (sys_addr[19:0]==20'h0C )   set_tresh_raw[DW*2-1:DW*1] <= $signed(sys_wdata[11:0]) ;
     if (sys_addr[19:0]==20'h10 )   set_dly[32*1-1:32*0]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h14 )   set_dec[17*1-1:17*0]       <= sys_wdata[17-1:0] ;
-    if (sys_addr[19:0]==20'h20 )   set_hyst[DW*1-1:DW*0]      <= cfg_decode_trig_level(sys_wdata, set_hres_en[0]) ;
-    if (sys_addr[19:0]==20'h24 )   set_hyst[DW*2-1:DW*1]      <= cfg_decode_trig_level(sys_wdata, set_hres_en[1]) ;
+    if (sys_addr[19:0]==20'h20 )   set_hyst_raw[DW*1-1:DW*0]  <= $signed(sys_wdata[11:0]) ;
+    if (sys_addr[19:0]==20'h24 )   set_hyst_raw[DW*2-1:DW*1]  <= $signed(sys_wdata[11:0]) ;
 
     if (sys_addr[19:0]==20'h30 )   set_filt_aa[18*1-1:18*0]   <= sys_wdata[18-1:0] ;
     if (sys_addr[19:0]==20'h34 )   set_filt_bb[25*1-1:25*0]   <= sys_wdata[25-1:0] ;
@@ -371,16 +387,16 @@ end else begin
     //20'h00000 : begin sys_ack <= sys_en;          sys_rdata <=                 adc_state_i                      ; end
     //20'h00004 : begin sys_ack <= sys_en;          sys_rdata <=                 trg_state_i                      ; end 
 
-    20'h00008 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}}, set_tresh[DW*1-1:DW*0]}          ; end
-    20'h0000C : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}}, set_tresh[DW*2-1:DW*1]}          ; end
+    20'h00008 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{set_tresh_raw[DW*1-1]}}, set_tresh_raw[DW*1-1:DW*0]} ; end
+    20'h0000C : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{set_tresh_raw[DW*2-1]}}, set_tresh_raw[DW*2-1:DW*1]} ; end
     20'h00010 : begin sys_ack <= sys_en;          sys_rdata <=                 set_dly[32*1-1:32*0]             ; end
     20'h00014 : begin sys_ack <= sys_en;          sys_rdata <= {{32-17{1'b0}}, set_dec[17*1-1:17*0]}            ; end
 
     20'h00018 : begin sys_ack <= sys_en;          sys_rdata <= {{32-RSZ{1'b0}}, adc_wp_cur_i[RSZ*1-1:RSZ*0]}    ; end
     20'h0001C : begin sys_ack <= sys_en;          sys_rdata <= {{32-RSZ{1'b0}}, adc_wp_trig_i[RSZ*1-1:RSZ*0]}   ; end
 
-    20'h00020 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_hyst[DW*1-1:DW*0]}          ; end
-    20'h00024 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_hyst[DW*2-1:DW*1]}          ; end
+    20'h00020 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{set_hyst_raw[DW*1-1]}},  set_hyst_raw[DW*1-1:DW*0]} ; end
+    20'h00024 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{set_hyst_raw[DW*2-1]}},  set_hyst_raw[DW*2-1:DW*1]} ; end
 
     20'h00028 : begin sys_ack <= sys_en;          sys_rdata <= {6'h0, set_hres_en[3], set_avg_en[3],
                                                                 6'h0, set_hres_en[2], set_avg_en[2],

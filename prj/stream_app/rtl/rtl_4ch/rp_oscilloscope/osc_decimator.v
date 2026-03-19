@@ -18,6 +18,7 @@ module osc_decimator
   input  wire                       ctl_rst, 
   // Config
   input  wire                       cfg_avg_en, 
+  input  wire                       cfg_hres_en,
   input  wire [CNT_BITS-1:0]        cfg_dec_factor, 
   input  wire [SHIFT_BITS-1:0]      cfg_dec_rshift 
 );
@@ -29,6 +30,7 @@ module osc_decimator
 localparam ACC_BITS = AXIS_DATA_BITS+CNT_BITS-1;
 
 assign s_axis_tready = 1;
+wire signed [AXIS_DATA_BITS-1:0] dec_dat_hres = cfg_hres_en ? ($signed(s_axis_tdata) <<< 2) : $signed(s_axis_tdata);
 
 
 //---------------------------------------------------------------------------------
@@ -129,15 +131,15 @@ end else begin
   if (s_axis_tvalid) begin
     if (dec_valid) begin // start again or arm
       adc_dec_cnt <= 17'h1    ;              
-      adc_sum   <= $signed(s_axis_tdata) ;
+      adc_sum   <= $signed(dec_dat_hres) ;
     end else begin
       adc_dec_cnt <= adc_dec_cnt + 17'h1 ;
-      adc_sum   <= $signed(adc_sum) + $signed(s_axis_tdata) ;
+      adc_sum   <= $signed(adc_sum) + $signed(dec_dat_hres) ;
     end
   end
 
    case (cfg_dec_factor & {17{cfg_avg_en}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
-      17'h0     : begin m_axis_tdata <= s_axis_tdata;        m_axis_tvalid <= dec_valid;  end // if averaging is disabled
+      17'h0     : begin m_axis_tdata <= dec_dat_hres;        m_axis_tvalid <= dec_valid;  end // if averaging is disabled
       17'h1     : begin m_axis_tdata <= adc_sum[15+0 :  0];  m_axis_tvalid <= dec_valid;  end
       17'h2     : begin m_axis_tdata <= adc_sum[15+1 :  1];  m_axis_tvalid <= dec_valid;  end
       17'h4     : begin m_axis_tdata <= adc_sum[15+2 :  2];  m_axis_tvalid <= dec_valid;  end
@@ -152,7 +154,7 @@ end else begin
       17'd12, 
       17'd13, 
       17'd14, 
-      17'd15    : begin m_axis_tdata <= s_axis_tdata;        m_axis_tvalid <= dec_valid;  end // no division for any other decimation factor
+      17'd15    : begin m_axis_tdata <= dec_dat_hres;        m_axis_tvalid <= dec_valid;  end // no division for any other decimation factor
       default   : begin m_axis_tdata <= dat_div;             m_axis_tvalid <= adc_dv_div; end
    endcase
 end

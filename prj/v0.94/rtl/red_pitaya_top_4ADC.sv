@@ -629,15 +629,21 @@ wire [16-1:0] adc_state_ch_0_1;
 wire [16-1:0] adc_state_ch_2_3;
 wire [16-1:0] axi_state_ch_0_1;
 wire [16-1:0] axi_state_ch_2_3;
+localparam int unsigned SCOPE_DW = 16;
+logic signed [SCOPE_DW-1:0] adc_scope_dat [MNA-1:0];
+
+for (genvar i = 0; i < MNA; i++) begin : scope_adc_ext
+  assign adc_scope_dat[i] = $signed(adc_dat[i]);
+end
 
 rp_scope_com #(
   .CHN(0),
   .N_CH(2),
-  .DW(14),
+  .DW(SCOPE_DW),
   .RSZ(14)) 
   i_scope_0_1 (
   // ADC
-  .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  .adc_dat_i     ({adc_scope_dat[1], adc_scope_dat[0]}  ),
   .adc_clk_i     ({2{adc_clk_01}}  ),  // clock
   .adc_rstn_i    ({2{adc_rstn_01}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
@@ -678,10 +684,10 @@ rp_scope_com #(
 rp_scope_com #(
   .CHN(1),
   .N_CH(2),
-  .DW(14),
+  .DW(SCOPE_DW),
   .RSZ(14)) 
   i_scope_2_3(  // ADC
-  .adc_dat_i     ({adc_dat[3], adc_dat[2]}  ),
+  .adc_dat_i     ({adc_scope_dat[3], adc_scope_dat[2]}  ),
   .adc_clk_i     ({2{adc_clk_23}}  ),  // clock
   .adc_rstn_i    ({2{adc_rstn_23}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger

@@ -79,6 +79,7 @@ module scope_cfg
    output wire [    DEC_CNT_BITS-1:0]  cfg_dec_factor_o        ,
    output wire [  DEC_SHIFT_BITS-1:0]  cfg_dec_rshift_o        ,
    output wire                         cfg_avg_en_o            ,
+   output wire                         cfg_hres_en_o           ,
    output wire [              32-1:0]  cfg_loopback_o          ,
    output wire                         cfg_8bit_dat_o          ,
    output reg                          clksel_o                ,
@@ -223,6 +224,7 @@ reg  [S_AXIS_DATA_BITS-1:0] cfg_trig_high_level;
 reg                         cfg_trig_edge;  
 
 reg                         cfg_avg_en; 
+reg                         cfg_hres_en;
 reg  [  DEC_CNT_BITS-1:0]   cfg_dec_factor;  
 reg  [DEC_SHIFT_BITS-1:0]   cfg_dec_rshift;  
 reg  [            32-1:0]   cfg_loopback;
@@ -386,6 +388,7 @@ begin
       cfg_dec_factor          <=   'h0;
       cfg_dec_rshift          <=   'h0;
       cfg_avg_en              <=  1'b0;
+      cfg_hres_en             <=  1'b0;
       cfg_loopback            <= 32'h0;
       cfg_filt_bypass         <=  1'b1;
       cfg_8bit_dat            <=  1'b0;
@@ -405,10 +408,11 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_POST_SAMP_ADDR)   )  cfg_trig_post_samp      <= reg_wdat_adc[TRIG_CNT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_LOW_LEVEL_ADDR)   )  cfg_trig_low_level      <= reg_wdat_adc[S_AXIS_DATA_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_HIGH_LEVEL_ADDR)  )  cfg_trig_high_level     <= reg_wdat_adc[S_AXIS_DATA_BITS-1:0];
-      if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_HIGH_LEVEL_ADDR)  )  cfg_trig_edge           <= reg_wdat_adc[0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==TRIG_EDGE_ADDR)        )  cfg_trig_edge           <= reg_wdat_adc[0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==DEC_FACTOR_ADDR)       )  cfg_dec_factor          <= reg_wdat_adc[DEC_CNT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==DEC_RSHIFT_ADDR)       )  cfg_dec_rshift          <= reg_wdat_adc[DEC_SHIFT_BITS-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==AVG_EN_ADDR)           )  cfg_avg_en              <= reg_wdat_adc[0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==AVG_EN_ADDR)           )  cfg_hres_en             <= reg_wdat_adc[1];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==LOOPBACK_ADDR)         )  cfg_loopback            <= reg_wdat_adc[32-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==SHIFT_8BIT)            )  cfg_8bit_dat            <= reg_wdat_adc[0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_BYPASS_ADDR)      )  cfg_filt_bypass         <= reg_wdat_adc[0];
@@ -460,6 +464,14 @@ begin
       TRIG_PRE_CNT_ADDR      : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {sts_trig_pre_overflow_i   , sts_trig_pre_cnt_i[30:0]};  end
       TRIG_POST_CNT_ADDR     : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {sts_trig_post_overflow_i  , sts_trig_post_cnt_i[30:0]}; end
       FILT_BYPASS_ADDR       : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}               , cfg_filt_bypass};         end
+      TRIG_LOW_LEVEL_ADDR    : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-S_AXIS_DATA_BITS{1'b0}}, cfg_trig_low_level};       end
+      TRIG_HIGH_LEVEL_ADDR   : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-S_AXIS_DATA_BITS{1'b0}}, cfg_trig_high_level};      end
+      TRIG_EDGE_ADDR         : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}               , cfg_trig_edge};            end
+      DEC_FACTOR_ADDR        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-DEC_CNT_BITS{1'b0}}     , cfg_dec_factor};           end
+      DEC_RSHIFT_ADDR        : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32-DEC_SHIFT_BITS{1'b0}}   , cfg_dec_rshift};           end
+      AVG_EN_ADDR            : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}               , cfg_hres_en, cfg_avg_en};  end
+      LOOPBACK_ADDR          : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                 cfg_loopback;              end
+      SHIFT_8BIT             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}               , cfg_8bit_dat};             end
 
       DIAG_REG1              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag1_i;                  end
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end
@@ -585,6 +597,7 @@ assign cfg_trig_edge_o         = cfg_trig_edge;
 assign cfg_dec_factor_o        = cfg_dec_factor;
 assign cfg_dec_rshift_o        = cfg_dec_rshift;
 assign cfg_avg_en_o            = cfg_avg_en;
+assign cfg_hres_en_o           = cfg_hres_en;
 assign cfg_loopback_o          = cfg_loopback;
 assign cfg_8bit_dat_o          = cfg_8bit_dat;
 assign cfg_dma_ctrl_o          = cfg_dma_ctrl;
@@ -745,5 +758,4 @@ begin
    end
 end
 endmodule
-
 
