@@ -241,6 +241,7 @@ wire                        cfg_trig_edge;
 wire                        trig_mod_op;
 
 wire                        cfg_avg_en; 
+wire                        cfg_hres_en;
 wire [  DEC_CNT_BITS-1:0]   cfg_dec_factor;  
 wire [DEC_SHIFT_BITS-1:0]   cfg_dec_rshift;  
 wire [            32-1:0]   cfg_loopback;
@@ -436,6 +437,7 @@ scope_cfg #(
   .cfg_dec_factor_o         (cfg_dec_factor),
   .cfg_dec_rshift_o         (cfg_dec_rshift),
   .cfg_avg_en_o             (cfg_avg_en),
+  .cfg_hres_en_o            (cfg_hres_en),
   .cfg_loopback_o           (cfg_loopback),
   .cfg_8bit_dat_o           (cfg_8bit_dat),
   .cfg_calib_offset_ch1_o   (cfg_calib_offset_ch1),
@@ -546,6 +548,7 @@ scope_cfg #(
   .cfg_dec_factor_i         (cfg_dec_factor),
   .cfg_dec_rshift_i         (cfg_dec_rshift),
   .cfg_avg_en_i             (cfg_avg_en),
+  .cfg_hres_en_i            (cfg_hres_en),
   .cfg_loopback_i           ({cfg_loopback[8],1'b0,cfg_loopback[0]}),
   .cfg_8bit_dat_i           (cfg_8bit_dat),
   .cfg_calib_offset_i       (cfg_calib_offset_ch1),
@@ -639,6 +642,7 @@ osc_top #(
   .cfg_dec_factor_i         (cfg_dec_factor),
   .cfg_dec_rshift_i         (cfg_dec_rshift),
   .cfg_avg_en_i             (cfg_avg_en),
+  .cfg_hres_en_i            (cfg_hres_en),
   .cfg_loopback_i           ({cfg_loopback[12],1'b0,cfg_loopback[4]}),
   .cfg_8bit_dat_i           (cfg_8bit_dat),
   .cfg_calib_offset_i       (cfg_calib_offset_ch2),
@@ -740,6 +744,7 @@ osc_top #(
   .cfg_dec_factor_i         (cfg_dec_factor),
   .cfg_dec_rshift_i         (cfg_dec_rshift),
   .cfg_avg_en_i             (cfg_avg_en),
+  .cfg_hres_en_i            (cfg_hres_en),
   .cfg_loopback_i           ({ramp_en[GV],loopback_gpio[GV],loopback_dac[GV]}),
   .cfg_8bit_dat_i           (cfg_8bit_dat),
   .cfg_calib_offset_i       (cfg_calib_offset[(GV+1)*32-1:GV*32]),

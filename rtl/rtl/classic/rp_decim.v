@@ -19,7 +19,7 @@ This module decimates the raw ADC data.
 This data can either be decimated with averaging or not. 
 */
 module rp_decim #(
-  parameter DW   = 14
+  parameter DW   = 14  // Legacy default; current classic hires implementation expects DW=16.
 )(
    input                adc_clk_i       ,  // ADC clock
    input                adc_rstn_i      ,  // ADC reset - active low
@@ -35,6 +35,32 @@ module rp_decim #(
 );
 
 localparam integer HRES_SHL = 2;
+localparam signed [31:0] BASE_MAX = 32'sd8191;
+localparam signed [31:0] BASE_MIN = -32'sd8192;
+localparam signed [31:0] HRES_MAX = 32'sd32767;
+localparam signed [31:0] HRES_MIN = -32'sd32768;
+
+function [DW-1:0] clamp_dec_out;
+   input signed [31:0] dat_i;
+   input               hres_en_i;
+begin
+   if (hres_en_i) begin
+      if (dat_i > HRES_MAX)
+         clamp_dec_out = HRES_MAX[DW-1:0];
+      else if (dat_i < HRES_MIN)
+         clamp_dec_out = HRES_MIN[DW-1:0];
+      else
+         clamp_dec_out = dat_i[DW-1:0];
+   end else begin
+      if (dat_i > BASE_MAX)
+         clamp_dec_out = BASE_MAX[DW-1:0];
+      else if (dat_i < BASE_MIN)
+         clamp_dec_out = BASE_MIN[DW-1:0];
+      else
+         clamp_dec_out = dat_i[DW-1:0];
+   end
+end
+endfunction
 
 //---------------------------------------------------------------------------------
 //  Decimate input data
@@ -55,6 +81,13 @@ wire [ 32-1: 0] div_out     ;
 reg             adc_dv_div  ;
 reg  [ 34-1: 0] sign_sr     ;
 reg             sign_curr   ;
+reg signed [31:0] adc_dat_raw;
+wire dec_valid = (adc_dec_cnt >= set_dec_i);
+wire hres_active = set_hres_en_i;
+wire signed [31:0] dec_dat_base = $signed(dec_dat_i);
+wire signed [31:0] dec_dat_hres = hres_active ? (dec_dat_base <<< HRES_SHL) : dec_dat_base;
+wire signed [31:0] adc_sum_s = $signed(adc_sum);
+wire signed [31:0] dat_div_s = $signed(dat_div);
 
 
 
@@ -125,15 +158,12 @@ end else begin
       adc_dv_div <= 1'b0;
 end
 
-wire dec_valid = (adc_dec_cnt >= set_dec_i);
-wire hres_active = set_hres_en_i;
-wire signed [DW-1:0] dec_dat_hres = hres_active ? ($signed(dec_dat_i) <<< HRES_SHL) : $signed(dec_dat_i);
-
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
    adc_sum   <= 32'h0 ;
    adc_dec_cnt <= 17'h0 ;
    adc_dv      <=  1'b0 ;
+   adc_dat     <= {DW{1'b0}};
 end else begin
    if (dec_valid || adc_arm_do_i) begin // start again or arm
       adc_dec_cnt <= 17'h1    ;              
@@ -144,11 +174,11 @@ end else begin
    end
 
    case (set_dec_i & {17{set_avg_en_i}}) // allowed dec factors: 1,2,4,8; if 16 or greater, use divider
-      17'h0     : begin adc_dat <= dec_dat_hres;          adc_dv <= dec_valid;  end // if averaging is disabled
-      17'h1     : begin adc_dat <= adc_sum[15+0 :  0]; adc_dv <= dec_valid;  end
-      17'h2     : begin adc_dat <= adc_sum[15+1 :  1]; adc_dv <= dec_valid;  end
-      17'h4     : begin adc_dat <= adc_sum[15+2 :  2]; adc_dv <= dec_valid;  end
-      17'h8     : begin adc_dat <= adc_sum[15+3 :  3]; adc_dv <= dec_valid;  end
+      17'h0     : begin adc_dat_raw = dec_dat_hres;      adc_dv <= dec_valid;   end // if averaging is disabled
+      17'h1     : begin adc_dat_raw = adc_sum_s;         adc_dv <= dec_valid;   end
+      17'h2     : begin adc_dat_raw = adc_sum_s >>> 1;   adc_dv <= dec_valid;   end
+      17'h4     : begin adc_dat_raw = adc_sum_s >>> 2;   adc_dv <= dec_valid;   end
+      17'h8     : begin adc_dat_raw = adc_sum_s >>> 3;   adc_dv <= dec_valid;   end
       17'd3, 
       17'd5, 
       17'd6,
@@ -159,9 +189,11 @@ end else begin
       17'd12, 
       17'd13, 
       17'd14, 
-      17'd15    : begin adc_dat <= dec_dat_hres; adc_dv <= dec_valid;  end // no division for any other decimation factor
-      default   : begin adc_dat <= dat_div;   adc_dv <= adc_dv_div; end
+      17'd15    : begin adc_dat_raw = dec_dat_hres;      adc_dv <= dec_valid;   end // no division for any other decimation factor
+      default   : begin adc_dat_raw = dat_div_s;         adc_dv <= adc_dv_div;  end
    endcase
+
+   adc_dat <= clamp_dec_out(adc_dat_raw, hres_active);
 end
 
 assign dec_dat_o = adc_dat;

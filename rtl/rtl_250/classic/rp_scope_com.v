@@ -211,20 +211,24 @@ rp_scope_calib #(
 //assign adc_filt_in = adc_calib_out[16-1:2];
 assign adc_filt_in = adc_calib_out;
 
-red_pitaya_dfilt1 i_dfilt1_ch (
-   // ADC
-  .adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
-  .adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
-  // changes fixed only to 12 bit
-  .adc_dat_i   ( {adc_filt_in, 2'b00}   ),  // ADC raw data
-  .adc_dat_o   ( adc_filtered ),  // filtered data
-   // configuration
-  .cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
-  .cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
-  .cfg_kk_i    ( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
-  .cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
-);
+// The filtering block is not used; it was removed from the code because it does not work in the 16-bit extension mode (hires).
+// red_pitaya_dfilt1 #(
+//   .DW      (  DW )
+//   ) i_dfilt1_ch (
+//    // ADC
+//   .adc_clk_i   ( adc_clk_i[GV] ),  // ADC clock
+//   .adc_rstn_i  ( filt_rstn[GV] ),  // ADC reset - active low
+//   // changes fixed only to 12 bit
+//   .adc_dat_i   ( {adc_filt_in, 2'b00}   ),  // ADC raw data
+//   .adc_dat_o   ( adc_filtered ),  // filtered data
+//    // configuration
+//   .cfg_aa_i    ( set_filt_aa[(GV+1)*18-1:GV*18] ),  // config AA coefficient
+//   .cfg_bb_i    ( set_filt_bb[(GV+1)*25-1:GV*25] ),  // config BB coefficient
+//   .cfg_kk_i    ( set_filt_kk[(GV+1)*25-1:GV*25] ),  // config KK coefficient
+//   .cfg_pp_i    ( set_filt_pp[(GV+1)*25-1:GV*25] )   // config PP coefficient
+// );
 
+assign adc_filtered = adc_filt_in;
 assign adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
 rp_decim #(
