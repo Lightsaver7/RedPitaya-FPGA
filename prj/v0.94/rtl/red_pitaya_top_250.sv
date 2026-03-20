@@ -138,6 +138,7 @@ logic          daisy_trig;
 logic [ 3-1:0] daisy_mode;
 logic          trig_ext;
 logic          trig_output_sel;
+logic [ 4-1:0] trig_ext_asg01;
 
 
 // PLL signals
