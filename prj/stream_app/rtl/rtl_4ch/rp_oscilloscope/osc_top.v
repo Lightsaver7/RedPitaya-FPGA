@@ -142,6 +142,7 @@ wire  [31:0]                buf2_ms_cnt;
 
 wire [S_AXIS_DATA_BITS-1:0] filt_tdata;   
 wire                        filt_tvalid;   
+wire                        filt_tready;
 
 wire                        external_trig_val;
 
@@ -224,26 +225,6 @@ begin
   rstn_smm <= adc_rstn;
 end
 
-osc_filter i_dfilt (
-   // ADC
-  .clk              ( clk_adc     ),  // ADC clock
-  .rst_n            ( rstn_fil    ),  // ADC reset - active low
-  // Slave AXI-S
-  .s_axis_tdata     (s_axis_tdata),
-  .s_axis_tvalid    (s_axis_tvalid),
-  .s_axis_tready    (),
-  // Master AXI-S
-  .m_axis_tdata     (filt_tdata),
-  .m_axis_tvalid    (filt_tvalid),
-  .m_axis_tready    (),
-   // configuration
-  .cfg_bypass      ( cfg_filt_bypass_i   ),
-  .cfg_coeff_aa    ( cfg_filt_coeff_aa_i),  // config AA coefficient
-  .cfg_coeff_bb    ( cfg_filt_coeff_bb_i ),  // config BB coefficient
-  .cfg_coeff_kk    ( cfg_filt_coeff_kk_i ),  // config KK coefficient
-  .cfg_coeff_pp    ( cfg_filt_coeff_pp_i )   // config PP coefficient
-);
-
 ////////////////////////////////////////////////////////////
 // Name : Calibration
 // 
@@ -255,8 +236,8 @@ osc_calib #(
   .clk              (clk_adc),
   .rst_n            (rstn_cal),        
   // Slave AXI-S
-  .s_axis_tdata     (filt_tdata),
-  .s_axis_tvalid    (filt_tvalid),
+  .s_axis_tdata     (s_axis_tdata),
+  .s_axis_tvalid    (s_axis_tvalid),
   .s_axis_tready    (),
   // Master AXI-S
   .m_axis_tdata     (calib_tdata),
@@ -266,12 +247,32 @@ osc_calib #(
   .cfg_calib_offset (cfg_calib_offset_i), 
   .cfg_calib_gain   (cfg_calib_gain_i));
 
+osc_filter i_dfilt (
+   // ADC
+  .clk              ( clk_adc     ),  // ADC clock
+  .rst_n            ( rstn_fil    ),  // ADC reset - active low
+  // Slave AXI-S
+  .s_axis_tdata     (calib_tdata),
+  .s_axis_tvalid    (calib_tvalid),
+  .s_axis_tready    (calib_tready),
+  // Master AXI-S
+  .m_axis_tdata     (filt_tdata),
+  .m_axis_tvalid    (filt_tvalid),
+  .m_axis_tready    (filt_tready),
+   // configuration
+  .cfg_bypass      ( cfg_filt_bypass_i   ),
+  .cfg_coeff_aa    ( cfg_filt_coeff_aa_i),  // config AA coefficient
+  .cfg_coeff_bb    ( cfg_filt_coeff_bb_i ),  // config BB coefficient
+  .cfg_coeff_kk    ( cfg_filt_coeff_kk_i ),  // config KK coefficient
+  .cfg_coeff_pp    ( cfg_filt_coeff_pp_i )   // config PP coefficient
+);
+
 ////////////////////////////////////////////////////////////
 // Name : Decimation
 // 
 ////////////////////////////////////////////////////////////
 assign dec_indata = ramp_en      ? ramp_sig     : 
-                   (loopback_dac ? s_axis_tdata : calib_tdata);    
+                   (loopback_dac ? s_axis_tdata : filt_tdata);    
 wire signed [S_AXIS_DATA_BITS-1:0] trig_low_level =
   cfg_hres_en_i ? ($signed(cfg_trig_low_level_i) <<< 2) : $signed(cfg_trig_low_level_i);
 wire signed [S_AXIS_DATA_BITS-1:0] trig_high_level =
@@ -285,8 +286,8 @@ osc_decimator #(
   .clk            (clk_adc),                   
   .rst_n          (rstn_dec),        
   .s_axis_tdata   (dec_indata),          
-  .s_axis_tvalid  (calib_tvalid),     
-  .s_axis_tready  (calib_tready),                                                                 
+  .s_axis_tvalid  (filt_tvalid),     
+  .s_axis_tready  (filt_tready),                                                                 
   .m_axis_tdata   (dec_tdata),          
   .m_axis_tvalid  (dec_tvalid),    
   .m_axis_tready  (dec_tready),      
