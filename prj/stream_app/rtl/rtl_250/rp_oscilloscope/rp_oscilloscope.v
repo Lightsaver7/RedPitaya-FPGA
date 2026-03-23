@@ -266,6 +266,7 @@ wire                        cfg_dma_ctrl_we;
 wire [31:0]                 cfg_dma_sts;
 
 wire                        cfg_8bit_dat;
+wire                        cfg_legacy_calib;
 
 wire [16-1:0]               cfg_calib_offset_ch1;
 wire [16-1:0]               cfg_calib_gain_ch1;
@@ -440,6 +441,7 @@ scope_cfg #(
   .cfg_hres_en_o            (cfg_hres_en),
   .cfg_loopback_o           (cfg_loopback),
   .cfg_8bit_dat_o           (cfg_8bit_dat),
+  .cfg_legacy_calib_o       (cfg_legacy_calib),
   .cfg_calib_offset_ch1_o   (cfg_calib_offset_ch1),
   .cfg_calib_offset_ch2_o   (cfg_calib_offset_ch2),
   .cfg_calib_gain_ch1_o     (cfg_calib_gain_ch1),
@@ -551,6 +553,7 @@ scope_cfg #(
   .cfg_hres_en_i            (cfg_hres_en),
   .cfg_loopback_i           ({cfg_loopback[8],1'b0,cfg_loopback[0]}),
   .cfg_8bit_dat_i           (cfg_8bit_dat),
+  .cfg_legacy_calib_i       (cfg_legacy_calib),
   .cfg_calib_offset_i       (cfg_calib_offset_ch1),
   .cfg_calib_gain_i         (cfg_calib_gain_ch1),
 
@@ -645,6 +648,7 @@ osc_top #(
   .cfg_hres_en_i            (cfg_hres_en),
   .cfg_loopback_i           ({cfg_loopback[12],1'b0,cfg_loopback[4]}),
   .cfg_8bit_dat_i           (cfg_8bit_dat),
+  .cfg_legacy_calib_i       (cfg_legacy_calib),
   .cfg_calib_offset_i       (cfg_calib_offset_ch2),
   .cfg_calib_gain_i         (cfg_calib_gain_ch2),
 

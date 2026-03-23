@@ -82,6 +82,7 @@ module scope_cfg
    output wire                         cfg_hres_en_o           ,
    output wire [              32-1:0]  cfg_loopback_o          ,
    output wire                         cfg_8bit_dat_o          ,
+   output wire                         cfg_legacy_calib_o      ,
    output reg                          clksel_o                ,
    input  wire                         daisy_slave_i           ,
 
@@ -164,6 +165,7 @@ localparam CALIB_OFFSET_ADDR_CH1    = 12'h74;  // Calibraton offset CH1
 localparam CALIB_GAIN_ADDR_CH1      = 12'h78;  // Calibraton gain CH1
 localparam CALIB_OFFSET_ADDR_CH2    = 12'h7C;  // Calibraton offset CH2
 localparam CALIB_GAIN_ADDR_CH2      = 12'h80;  // Calibraton gain CH2
+localparam LEGACY_CALIB_EN_ADDR     = 12'h84;  // bit0 enables legacy post-filter calibration
 localparam BUF1_LOST_SAMP_CNT_CH2   = 12'h9C;  // Number of lost samples in buffer 1
 localparam BUF2_LOST_SAMP_CNT_CH2   = 12'hA0;  // Number of lost samples in buffer 2
 localparam CURR_WP_CH1              = 12'hA4;  //current write pointer CH1
@@ -228,6 +230,7 @@ reg                         cfg_hres_en;
 reg  [  DEC_CNT_BITS-1:0]   cfg_dec_factor;  
 reg  [DEC_SHIFT_BITS-1:0]   cfg_dec_rshift;  
 reg  [            32-1:0]   cfg_loopback;
+reg                         cfg_legacy_calib;
 
 reg                         cfg_filt_bypass;  
 
@@ -392,6 +395,7 @@ begin
       cfg_loopback            <= 32'h0;
       cfg_filt_bypass         <=  1'b1;
       cfg_8bit_dat            <=  1'b0;
+      cfg_legacy_calib        <=  1'b0;
 
       cfg_filt_coeff_aa       <= {4{18'h0}};
       cfg_filt_coeff_bb       <= {4{25'h0}};
@@ -416,6 +420,7 @@ begin
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==LOOPBACK_ADDR)         )  cfg_loopback            <= reg_wdat_adc[32-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==SHIFT_8BIT)            )  cfg_8bit_dat            <= reg_wdat_adc[0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==FILT_BYPASS_ADDR)      )  cfg_filt_bypass         <= reg_wdat_adc[0];
+      if (reg_write_adc && (reg_ofs_adc[12-1:0]==LEGACY_CALIB_EN_ADDR)  )  cfg_legacy_calib        <= reg_wdat_adc[0];
 
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH1) )  cfg_calib_offset[1*16-1:0*16]  <= reg_wdat_adc[16-1:0];
       if (reg_write_adc && (reg_ofs_adc[12-1:0]==CALIB_OFFSET_ADDR_CH2) )  cfg_calib_offset[2*16-1:1*16]  <= reg_wdat_adc[16-1:0];
@@ -473,6 +478,7 @@ begin
       AVG_EN_ADDR            : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 2{1'b0}}              , cfg_hres_en, cfg_avg_en};  end
       LOOPBACK_ADDR          : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                               cfg_loopback;              end
       SHIFT_8BIT             : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}              , cfg_8bit_dat};             end
+      LEGACY_CALIB_EN_ADDR   : begin  reg_ack_adc = 1'b1;       reg_rdat_adc = {{32- 1{1'b0}}              , cfg_legacy_calib};         end
 
       DIAG_REG1              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag1_i;                  end
       DIAG_REG2              : begin  reg_ack_adc = 1'b1;       reg_rdat_adc =                                diag2_i;                  end
@@ -601,6 +607,7 @@ assign cfg_avg_en_o            = cfg_avg_en;
 assign cfg_hres_en_o           = cfg_hres_en;
 assign cfg_loopback_o          = cfg_loopback;
 assign cfg_8bit_dat_o          = cfg_8bit_dat;
+assign cfg_legacy_calib_o      = cfg_legacy_calib;
 assign cfg_dma_ctrl_o          = cfg_dma_ctrl;
 assign cfg_dma_ctrl_we_o       = cfg_dma_ctrl_we;
 
@@ -759,4 +766,3 @@ begin
    end
 end
 endmodule
-

@@ -250,6 +250,7 @@ wire [4*32-1:0]             cfg_dma_dst_addr2;
 
 wire [4*16-1:0]             cfg_calib_offset;
 wire [4*16-1:0]             cfg_calib_gain;
+wire                        cfg_legacy_calib;
 
 wire [4*32-1:0]             buf1_ms_cnt;
 wire [4*32-1:0]             buf2_ms_cnt;
@@ -450,6 +451,7 @@ scope_cfg #(
   .cfg_hres_en_o            (cfg_hres_en),
   .cfg_loopback_o           (cfg_loopback),
   .cfg_8bit_dat_o           (cfg_8bit_dat),
+  .cfg_legacy_calib_o       (cfg_legacy_calib),
   .clksel_o                 (clksel_o),
   .daisy_slave_i            (daisy_slave_i),
   
@@ -539,6 +541,7 @@ osc_top #(
   .cfg_hres_en_i            (cfg_hres_en),
   .cfg_loopback_i           ({ramp_en[GV],loopback_gpio[GV],loopback_dac[GV]}),
   .cfg_8bit_dat_i           (cfg_8bit_dat),
+  .cfg_legacy_calib_i       (cfg_legacy_calib),
   .cfg_calib_offset_i       (cfg_calib_offset[(GV+1)*16-1:GV*16]),
   .cfg_calib_gain_i         (cfg_calib_gain[(GV+1)*16-1:GV*16]),
 
