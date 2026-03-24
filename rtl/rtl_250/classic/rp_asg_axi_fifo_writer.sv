@@ -68,15 +68,14 @@ logic          axi_busy;
 
 localparam int REQ_W = 128;
 
+logic           req_valid;
 logic           req_empty;
 logic [REQ_W-1:0] req_payload;
 logic [REQ_W-1:0] req_fifo_out;
 logic [REQ_W-1:0] req_data_q;
-logic           req_loaded;
-logic           req_pop_d;
 logic [AW-1:0]  req_start_addr;
 logic [AW-1:0]  req_stop_addr;
-wire            req_pop = (wr_state_q == WR_IDLE) && !req_empty && !req_loaded;
+wire            req_pop = (wr_state_q == WR_IDLE) && !req_empty;
 assign req_payload = {{(REQ_W-2*AW){1'b0}}, set_axi_start_i, set_axi_stop_i};
 
 // Always stores only one request
@@ -91,6 +90,7 @@ sync_fifo inst_sync_fifo
   .dout           (req_fifo_out      ),
   .rd_en          (req_pop           ),
   .empty          (req_empty         ),
+  .valid          (req_valid         ),
   .wr_rst_busy    (                  ),
   .rd_rst_busy    (                  )
 );
@@ -99,16 +99,8 @@ sync_fifo inst_sync_fifo
 always_ff @(posedge axi_sys.clk) begin
   if (!axi_sys.rstn || fsm_reset_sync) begin
     req_data_q <= '0;
-    req_loaded <= 1'b0;
-    req_pop_d  <= 1'b0;
-  end else begin
-    req_pop_d <= req_pop;
-    if (req_pop_d) begin
-      req_data_q <= req_fifo_out;
-      req_loaded <= 1'b1;
-    end else if (wr_state_q == WR_INIT) begin
-      req_loaded <= 1'b0;
-    end
+  end else if (req_valid) begin
+    req_data_q <= req_fifo_out;
   end
 end
 
@@ -183,7 +175,7 @@ always_comb begin : fsm_axi_read
 
   unique case (wr_state_q)
     WR_IDLE: begin
-      if (req_loaded)
+      if (req_valid)
         wr_state_d = WR_INIT;
     end
 
@@ -201,7 +193,7 @@ always_comb begin : fsm_axi_read
     end
 
     WR_WAIT_FIFO: begin
-      if (!dat_fifo_full)
+      if (dat_wr_fifo_lvl < DATA_REQUEST_LEVEL)
         wr_state_d = WR_ADDR_RDY;
     end
 
