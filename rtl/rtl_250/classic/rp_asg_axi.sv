@@ -42,7 +42,7 @@ localparam LW =  4;
 localparam AXI_BURST_LEN      = 16;
 localparam DATA_REQUEST_LEVEL = 128-16;
 localparam FIFO_PRELOAD_SIZE  = 240;
-localparam DAT_FIFO_W         = DW;
+localparam DAT_FIFO_W         = 96;
 
 logic            start_pulse_dac;
 
@@ -126,8 +126,9 @@ rp_asg_axi_fifo_reader #(
 //
 //  data FIFO
 
-assign dat_fifo_in  = dat_fifo_idata;
-assign dat_fifo_out = dat_fifo_out_full;
+assign dat_fifo_in  = {{(DAT_FIFO_W-DW){1'b0}}, dat_fifo_idata};
+assign dat_fifo_out = dat_fifo_out_full[DW-1:0];
+assign dat_wr_fifo_lvl = '0;
 
 asg_dat_fifo inst_asg_dat_fifo
 (
@@ -136,7 +137,6 @@ asg_dat_fifo inst_asg_dat_fifo
   .rst            (axi_fifo_reset   ),
   .din            (dat_fifo_in      ),
   .wr_en          (dat_fifo_wr      ),
-  .wr_data_count  (dat_wr_fifo_lvl  ),
   .full           (dat_fifo_full    ),
   .dout           (dat_fifo_out_full),
   .rd_en          (dat_fifo_rd      ),
@@ -146,25 +146,5 @@ asg_dat_fifo inst_asg_dat_fifo
   .wr_rst_busy    (dat_fifo_rst_busy),
   .rd_rst_busy    (                 )
 );
-
-//---------------------------------------------------------------------------------
-//
-//  ILA debug (dac_clk_i domain)
-
-// ila_0 i_ila_asg_axi (
-//   .clk    (dac_clk_i),
-//   .probe0 (trig_i),             // [1]
-//   .probe1 (set_rst_i),          // [1]
-//   .probe2 (set_axi_en_i),       // [1]
-//   .probe3 (start_pulse_dac),    // [1]
-//   .probe4 (dat_fifo_rd),        // [1]
-//   .probe5 (dat_fifo_empty),     // [1]
-//   .probe6 (dat_rd_valid),       // [1]
-//   .probe7 (dat_rd_fifo_lvl),    // [8]
-//   .probe8 (axi_state_o),        // [20]
-//   .probe9 (axi_last_o),         // [1]
-//   .probe10(axi_last_pre_o),     // [1]
-//   .probe11(dac_o)               // [14]
-// );
 
 endmodule

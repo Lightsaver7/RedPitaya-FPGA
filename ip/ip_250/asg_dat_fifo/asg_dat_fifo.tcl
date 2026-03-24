@@ -70,15 +70,13 @@ set_property -dict [list \
   CONFIG.FIFO_Implementation_wrch {Common_Clock_Distributed_RAM} \
   CONFIG.Fifo_Implementation {Independent_Clocks_Block_RAM} \
   CONFIG.Full_Flags_Reset_Value {1} \
-  CONFIG.Input_Data_Width {64} \
+  CONFIG.Input_Data_Width {96} \
   CONFIG.Input_Depth {256} \
-  CONFIG.Output_Data_Width {64} \
+  CONFIG.Output_Data_Width {96} \
   CONFIG.Read_Data_Count {true} \
   CONFIG.Read_Data_Count_Width {8} \
   CONFIG.Use_Embedded_Registers {true} \
   CONFIG.Valid_Flag {true} \
-  CONFIG.Write_Data_Count {true} \
-  CONFIG.Write_Data_Count_Width {8} \
 ] [get_ips asg_dat_fifo]
 
 # Runtime Parameters
