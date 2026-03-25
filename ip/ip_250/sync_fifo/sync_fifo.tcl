@@ -74,6 +74,7 @@ set_property -dict [list \
   CONFIG.Input_Data_Width {128} \
   CONFIG.Input_Depth {16} \
   CONFIG.Output_Data_Width {128} \
+  CONFIG.Valid_Flag {true} \
 ] [get_ips sync_fifo]
 
 # Runtime Parameters
@@ -82,4 +83,3 @@ set_property -dict {
 } $sync_fifo
 
 ##################################################################
-
