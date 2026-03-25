@@ -39,8 +39,9 @@ module rp_asg_axi #(
 localparam DW = 64;
 localparam AW = 32;
 localparam LW =  4;
-localparam AXI_BURST_LEN      = 16;
-localparam DATA_REQUEST_LEVEL = 128-16;
+localparam int DAT_FIFO_DEPTH = 256;
+localparam int AXI_BURST_LEN = 16; // max burst supported by the current 4-bit LEN path
+localparam int DATA_REQUEST_LEVEL = DAT_FIFO_DEPTH - (2*AXI_BURST_LEN);
 localparam FIFO_PRELOAD_SIZE  = 240;
 localparam DAT_FIFO_W         = DW;
 

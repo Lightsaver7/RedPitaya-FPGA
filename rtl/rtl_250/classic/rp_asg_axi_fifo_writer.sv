@@ -38,8 +38,6 @@ localparam logic [2:0] AXI_RSIZE = 3'h3; // 8 bytes per beat for 64-bit data
 typedef enum logic [2:0] {
   WR_IDLE,
   WR_INIT,
-  WR_RELOAD,
-  WR_ADDR_INC,
   WR_ADDR_RDY,
   WR_WAIT_FIFO,
   WR_READ
@@ -58,7 +56,6 @@ logic          fsm_reset_sync;
 
 logic [AW-1:0] dat_fifo_iaddr;
 
-logic          fifo_wr_dly;
 logic          fifo_wr_ready;
 logic          axi_busy;
 
@@ -152,16 +149,16 @@ always_ff @( posedge axi_sys.clk ) begin
     if (wr_state_q == WR_INIT) begin
       start_addr_q  <= req_start_addr;
       stop_addr_q   <= req_stop_addr;
+      rd_addr_q     <= req_start_addr;
       burst_words_q <= BURST_WORDS;
       rsize_q       <= AXI_RSIZE;
     end
 
-    if (wr_state_q == WR_RELOAD) begin
-      rd_addr_q <= start_addr_q;
-    end
-
-    if (wr_state_q == WR_READ && wr_state_d == WR_ADDR_INC) begin
-      rd_addr_q <= rd_addr_q + AXI_BURST_BYTES;
+    if (wr_state_q == WR_READ && !axi_busy) begin
+      if (dat_fifo_iaddr >= stop_addr_q)
+        rd_addr_q <= start_addr_q;
+      else
+        rd_addr_q <= rd_addr_q + AXI_BURST_BYTES;
     end
 
     if (wr_state_q == WR_WAIT_FIFO && wr_state_d == WR_ADDR_RDY) begin
@@ -181,19 +178,11 @@ always_comb begin : fsm_axi_read
 
     WR_INIT: begin
       if (!dat_fifo_rst_busy)
-        wr_state_d = WR_RELOAD;
-    end
-
-    WR_RELOAD: begin
-      wr_state_d = WR_WAIT_FIFO;
-    end
-
-    WR_ADDR_INC: begin
-      wr_state_d = WR_WAIT_FIFO;
+        wr_state_d = WR_WAIT_FIFO;
     end
 
     WR_WAIT_FIFO: begin
-      if (dat_wr_fifo_lvl < DATA_REQUEST_LEVEL)
+      if (dat_wr_fifo_lvl <= DATA_REQUEST_LEVEL)
         wr_state_d = WR_ADDR_RDY;
     end
 
@@ -203,13 +192,8 @@ always_comb begin : fsm_axi_read
     end
 
     WR_READ: begin
-      if (!axi_busy) begin
-        if (dat_fifo_iaddr >= stop_addr_q) begin
-          wr_state_d = WR_RELOAD;
-        end else begin
-          wr_state_d = WR_ADDR_INC;
-        end
-      end
+      if (!axi_busy)
+        wr_state_d = WR_WAIT_FIFO;
     end
 
     default:
@@ -221,15 +205,9 @@ end
 //
 //  interface to AXI
 
-always_ff @(posedge axi_sys.clk) begin
-  if (!axi_sys.rstn) begin
-    fifo_wr_dly <= '0;
-  end else begin
-    fifo_wr_dly <= dat_fifo_wr;
-  end
-end
-
-assign fifo_wr_ready = !dat_fifo_full && !dat_fifo_wr && !fifo_wr_dly;
+// Allow one beat per cycle on the AXI R channel. Burst launch threshold keeps
+// enough free space in the FIFO, so backpressure only needs to reflect real full.
+assign fifo_wr_ready = !dat_fifo_full;
 
 axi_rd_burst #(
   .DW  (DW),
