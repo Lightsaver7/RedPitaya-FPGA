@@ -41,7 +41,8 @@ localparam AW = 32;
 localparam LW =  4;
 localparam int DAT_FIFO_DEPTH = 256;
 localparam int AXI_BURST_LEN = 16; // max burst supported by the current 4-bit LEN path
-localparam int DATA_REQUEST_LEVEL = DAT_FIFO_DEPTH - (2*AXI_BURST_LEN);
+localparam int AXI_MAX_OUTSTANDING_BURSTS = 8;
+localparam int DATA_REQUEST_LEVEL = DAT_FIFO_DEPTH - AXI_BURST_LEN;
 localparam FIFO_PRELOAD_SIZE  = 240;
 localparam DAT_FIFO_W         = DW;
 
@@ -70,9 +71,10 @@ rp_asg_axi_fifo_writer #(
   .DW                 (DW),
   .AW                 (AW),
   .LW                 (LW),
-  .AXI_BURST_LEN       (AXI_BURST_LEN),
+  .AXI_BURST_LEN      (AXI_BURST_LEN),
   .DATA_REQUEST_LEVEL (DATA_REQUEST_LEVEL),
-  .WR_LVL_W            (8)
+  .WR_LVL_W           (8),
+  .MAX_OUTSTANDING_BURSTS (AXI_MAX_OUTSTANDING_BURSTS)
 ) inst_axi_fifo_writer (
   .dac_clk_i       (dac_clk_i),
   .dac_rstn_i      (dac_rstn_i),

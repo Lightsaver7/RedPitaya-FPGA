@@ -154,6 +154,7 @@ axi_master #(
   .sys_rdata_o    ( axi0_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi0_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi0_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi0_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi0_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi0_sys.rerr   )  // system read error
 );
@@ -229,6 +230,7 @@ axi_master #(
   .sys_rdata_o    ( axi1_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi1_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi1_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi1_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi1_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi1_sys.rerr   )  // system read error
 );
@@ -238,7 +240,8 @@ axi_master #(
   .AW    (  32    ), // address width
   .ID    (   3    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW    (   4    ), // master ID width
-  .LW    (   4    )  // length width
+  .LW    (   4    ), // length width
+  .RD_MAX_OUTSTANDING (   8    )
 ) axi_master_2 (
    // global signals
   .axi_clk_i      ( hp2_saxi.ACLK   ), // global clock
@@ -304,6 +307,7 @@ axi_master #(
   .sys_rdata_o    ( axi2_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi2_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi2_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi2_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi2_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi2_sys.rerr   )  // system read error
 );
@@ -313,7 +317,8 @@ axi_master #(
   .AW    (  32    ), // address width
   .ID    (   4    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW    (   4    ), // master ID width
-  .LW    (   4    )  // length width
+  .LW    (   4    ), // length width
+  .RD_MAX_OUTSTANDING (   8    )
 ) axi_master_3 (
    // global signals
   .axi_clk_i      ( hp3_saxi.ACLK   ), // global clock
@@ -379,6 +384,7 @@ axi_master #(
   .sys_rdata_o    ( axi3_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi3_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi3_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi3_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi3_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi3_sys.rerr   )  // system read error
 );
