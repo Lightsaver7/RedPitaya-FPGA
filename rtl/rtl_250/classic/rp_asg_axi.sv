@@ -39,9 +39,13 @@ module rp_asg_axi #(
 localparam DW = 64;
 localparam AW = 32;
 localparam LW =  4;
-localparam AXI_BURST_LEN      = 16;
-localparam DATA_REQUEST_LEVEL = 128-16;
-localparam FIFO_PRELOAD_SIZE  = 240;
+localparam int DAT_FIFO_DEPTH = 1024;
+localparam int DAT_FIFO_LVL_W = 10;
+localparam int AXI_BURST_LEN = 16; // max burst supported by the current 4-bit LEN path
+localparam int AXI_MAX_OUTSTANDING_BURSTS = 8;
+localparam int DAT_FIFO_MARGIN = 4*AXI_BURST_LEN;
+localparam int DATA_REQUEST_LEVEL = DAT_FIFO_DEPTH - DAT_FIFO_MARGIN;
+localparam int FIFO_PRELOAD_SIZE  = DAT_FIFO_DEPTH - DAT_FIFO_MARGIN;
 localparam DAT_FIFO_W         = DW;
 
 logic            start_pulse_dac;
@@ -49,12 +53,12 @@ logic            start_pulse_dac;
 logic [DW-1:0]       dat_fifo_idata;
 logic               dat_fifo_wr;
 logic               dat_fifo_full;
-logic [8-1:0]        dat_wr_fifo_lvl;
+logic [DAT_FIFO_LVL_W-1:0] dat_wr_fifo_lvl;
 logic [DAT_FIFO_W-1:0] dat_fifo_out_full;
 logic [DW-1:0]       dat_fifo_out;
 logic               dat_fifo_rd;
 logic               dat_fifo_empty;
-logic [8-1:0]        dat_rd_fifo_lvl;
+logic [DAT_FIFO_LVL_W-1:0] dat_rd_fifo_lvl;
 logic [7-1:0]        dat_rd_fifo_lvl_7;
 logic               dat_rd_valid;
 logic               dat_fifo_rst_busy;
@@ -69,9 +73,10 @@ rp_asg_axi_fifo_writer #(
   .DW                 (DW),
   .AW                 (AW),
   .LW                 (LW),
-  .AXI_BURST_LEN       (AXI_BURST_LEN),
+  .AXI_BURST_LEN      (AXI_BURST_LEN),
   .DATA_REQUEST_LEVEL (DATA_REQUEST_LEVEL),
-  .WR_LVL_W            (8)
+  .WR_LVL_W           (DAT_FIFO_LVL_W),
+  .MAX_OUTSTANDING_BURSTS (AXI_MAX_OUTSTANDING_BURSTS)
 ) inst_axi_fifo_writer (
   .dac_clk_i       (dac_clk_i),
   .dac_rstn_i      (dac_rstn_i),
@@ -92,7 +97,7 @@ rp_asg_axi_fifo_writer #(
 //
 //  FIFO reader + DAC output
 
-assign dat_rd_fifo_lvl_7 = dat_rd_fifo_lvl[6:0];
+assign dat_rd_fifo_lvl_7 = |dat_rd_fifo_lvl[DAT_FIFO_LVL_W-1:7] ? 7'h7f : dat_rd_fifo_lvl[6:0];
 
 rp_asg_axi_fifo_reader #(
   .DW                (DW),

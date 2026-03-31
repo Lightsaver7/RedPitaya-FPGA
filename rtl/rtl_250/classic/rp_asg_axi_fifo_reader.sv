@@ -416,35 +416,4 @@ assign axi_state_o  =  {1'b0,            // [19:19]
                         1'b0,            // [2:2]
                         fifo_ready,      // [1:1]
                         1'b0};           // [0:0]
-
-//---------------------------------------------------------------------------------
-//
-//  ILA debug (dac_clk_i domain)
-
-ila_2 i_ila_asg_axi_fifo_reader (
-  .clk    (dac_clk_i),
-  .probe0 (trig_i),             // [1]
-  .probe1 (set_rst_i),          // [1]
-  .probe2 (set_axi_en_i),       // [1]
-  .probe3 (rd_state_q),         // [3]
-  .probe4 (start_pulse_o),      // [1]
-  .probe5 (dat_fifo_rd),        // [1]
-  .probe6 (dat_fifo_empty),     // [1]
-  .probe7 (dat_rd_valid),       // [1]
-  .probe8 (dat_rd_fifo_lvl),    // [RD_LVL_W]
-  .probe9 (words_left_q),       // [32]
-  .probe10(cycle_cnt_q),        // [16]
-  .probe11(dec_cnt_q),          // [32]
-  .probe12(dec_step),           // [1]
-  .probe13(sample_index),       // [2]
-  .probe14(consume_word),       // [1]
-  .probe15(cycle_done),         // [1]
-  .probe16(axi_last_o),         // [1]
-  .probe17(axi_last_pre_o),     // [1]
-  .probe18(dac_o),              // [14]
-  .probe19(axi_state_o),        // [20]
-  .probe20(axi_start_use),      // [32]
-  .probe21(axi_stop_use)        // [32]
-);
-
 endmodule
