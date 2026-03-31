@@ -231,6 +231,9 @@ wire                         cfg_filt_bypass;
 wire [31:0]                 cfg_dma_buf_size;
 wire [31:0]                 cfg_dma_ctrl;
 wire                        cfg_dma_ctrl_we;
+wire [63:0]                 cfg_timestamp_init;
+wire                        cfg_timestamp_init_we;
+reg  [63:0]                 timestamp_counter;
 wire                        cfg_8bit_dat;
 wire [4*32-1:0]             cfg_dma_sts;
 wire [ 4*4-1:0]             cfg_event_sts;
@@ -254,6 +257,8 @@ wire                        cfg_legacy_calib;
 
 wire [4*32-1:0]             buf1_ms_cnt;
 wire [4*32-1:0]             buf2_ms_cnt;
+wire [4*64-1:0]             buf1_timestamp;
+wire [4*64-1:0]             buf2_timestamp;
 wire [4*32-1:0]             curr_wp;
 
 wire [ 4*4-1:0]             osc_event_op;
@@ -286,6 +291,16 @@ assign loopback_sel  = cfg_loopback[8-1:0];
 
 assign intr = |dma_intr;
 assign trig_out = |ser_trig;
+
+always @(posedge m_axi_osc1_aclk)
+begin
+  if (rstn_cfgax == 1'b0)
+    timestamp_counter <= 64'd0;
+  else if (cfg_timestamp_init_we)
+    timestamp_counter <= cfg_timestamp_init;
+  else
+    timestamp_counter <= timestamp_counter + 64'd1;
+end
 
 
 wire [4*M_AXI_OSC1_ADDR_BITS-1:0]      m_axi_osc_awaddr;
@@ -464,12 +479,17 @@ scope_cfg #(
 
   .cfg_dma_dst_addr1_o      (cfg_dma_dst_addr1),
   .cfg_dma_dst_addr2_o      (cfg_dma_dst_addr2),
+  .cfg_timestamp_init_o     (cfg_timestamp_init),
+  .cfg_timestamp_init_we_o  (cfg_timestamp_init_we),
 
   .cfg_calib_offset_o       (cfg_calib_offset),
   .cfg_calib_gain_o         (cfg_calib_gain),
 
+  .curr_timestamp_i         (timestamp_counter),
   .buf1_ms_cnt_i            (buf1_ms_cnt),
   .buf2_ms_cnt_i            (buf2_ms_cnt),
+  .buf1_timestamp_i         (buf1_timestamp),
+  .buf2_timestamp_i         (buf2_timestamp),
   .curr_wp_i                (curr_wp),
 
 
@@ -557,9 +577,14 @@ osc_top #(
   .cfg_dma_buf_size_i       (cfg_dma_buf_size),
   .cfg_dma_ctrl_i           (cfg_dma_ctrl),
   .cfg_dma_ctrl_we_i        (cfg_dma_ctrl_we),
+  .cfg_timestamp_counter_i  (timestamp_counter),
+  .cfg_timestamp_init_i     (cfg_timestamp_init),
+  .cfg_timestamp_init_we_i  (cfg_timestamp_init_we),
 
   .buf1_ms_cnt_o            (buf1_ms_cnt[(GV+1)*32-1:GV*32]),
   .buf2_ms_cnt_o            (buf2_ms_cnt[(GV+1)*32-1:GV*32]),
+  .buf1_timestamp_o         (buf1_timestamp[(GV+1)*64-1:GV*64]),
+  .buf2_timestamp_o         (buf2_timestamp[(GV+1)*64-1:GV*64]),
 
   .curr_wp_o                (curr_wp[(GV+1)*32-1:GV*32]),
   .diag1_o                  (diag1[(GV+1)*32-1:GV*32]),

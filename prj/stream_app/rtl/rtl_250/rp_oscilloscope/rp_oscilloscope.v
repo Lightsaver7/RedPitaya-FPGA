@@ -215,6 +215,8 @@ begin
 end
 assign intr = |dma_intr;
 
+wire                        trig_out1;
+wire                        trig_out2;
 assign trig_out = trig_out1 | trig_out2;
 //assign trig_out = |ser_trig;
 
@@ -263,7 +265,16 @@ wire [31:0]                 cfg_dma_dst_addr2_ch2;
 wire [31:0]                 cfg_dma_buf_size;
 wire [31:0]                 cfg_dma_ctrl;
 wire                        cfg_dma_ctrl_we;
+wire [63:0]                 cfg_timestamp_init;
+wire                        cfg_timestamp_init_we;
 wire [31:0]                 cfg_dma_sts;
+reg                         timestamp_init_toggle_axi;
+reg  [1:0]                  timestamp_init_toggle_adc;
+reg  [63:0]                 cfg_timestamp_init_adc1;
+reg  [63:0]                 cfg_timestamp_init_adc2;
+reg  [63:0]                 timestamp_counter_adc;
+reg  [63:0]                 timestamp_counter_axi_r1;
+reg  [63:0]                 timestamp_counter_axi_r2;
 
 wire                        cfg_8bit_dat;
 wire                        cfg_legacy_calib;
@@ -331,6 +342,10 @@ wire  [31:0]                buf1_ms_cnt_ch1;
 wire  [31:0]                buf2_ms_cnt_ch1;
 wire  [31:0]                buf1_ms_cnt_ch2;
 wire  [31:0]                buf2_ms_cnt_ch2;
+wire  [63:0]                buf1_timestamp_ch1;
+wire  [63:0]                buf2_timestamp_ch1;
+wire  [63:0]                buf1_timestamp_ch2;
+wire  [63:0]                buf2_timestamp_ch2;
 wire  [31:0]                curr_wp_ch1;
 wire  [31:0]                curr_wp_ch2;
 
@@ -345,6 +360,44 @@ wire  [31:0]                diag4_ch1, diag4_ch2;
 wire [4-1:0]                ramp_en;
 wire [4-1:0]                loopback_gpio;
 wire [4-1:0]                loopback_dac;
+
+always @(posedge m_axi_osc1_aclk)
+begin
+  if (~rstn_cfgax)
+    timestamp_init_toggle_axi <= 1'b0;
+  else if (cfg_timestamp_init_we)
+    timestamp_init_toggle_axi <= ~timestamp_init_toggle_axi;
+end
+
+always @(posedge clk)
+begin
+  if (~rstn_cfg) begin
+    cfg_timestamp_init_adc1   <= 64'd0;
+    cfg_timestamp_init_adc2   <= 64'd0;
+    timestamp_init_toggle_adc <= 2'b00;
+    timestamp_counter_adc     <= 64'd0;
+  end else begin
+    cfg_timestamp_init_adc1   <= cfg_timestamp_init;
+    cfg_timestamp_init_adc2   <= cfg_timestamp_init_adc1;
+    timestamp_init_toggle_adc <= {timestamp_init_toggle_adc[0], timestamp_init_toggle_axi};
+
+    if (timestamp_init_toggle_adc[1] != timestamp_init_toggle_adc[0])
+      timestamp_counter_adc <= cfg_timestamp_init_adc2;
+    else
+      timestamp_counter_adc <= timestamp_counter_adc + 64'd1;
+  end
+end
+
+always @(posedge m_axi_osc1_aclk)
+begin
+  if (~rstn_cfgax) begin
+    timestamp_counter_axi_r1 <= 64'd0;
+    timestamp_counter_axi_r2 <= 64'd0;
+  end else begin
+    timestamp_counter_axi_r1 <= timestamp_counter_adc;
+    timestamp_counter_axi_r2 <= timestamp_counter_axi_r1;
+  end
+end
 
 assign osc1_event_op = cfg_event_op;
 assign osc2_event_op = cfg_event_op;
@@ -484,13 +537,20 @@ scope_cfg #(
   .cfg_dma_buf_size_o       (cfg_dma_buf_size),
   .cfg_dma_ctrl_o           (cfg_dma_ctrl),
   .cfg_dma_ctrl_we_o        (cfg_dma_ctrl_we),
+  .cfg_timestamp_init_o     (cfg_timestamp_init),
+  .cfg_timestamp_init_we_o  (cfg_timestamp_init_we),
   .cfg_dma_sts_i            (cfg_dma_sts),
+  .curr_timestamp_i         (timestamp_counter_axi_r2),
   //.cfg_dma_sts_i            (cfg_dma_sts[1*32-1:0*32]),
 
   .buf1_ms_cnt_ch1_i        (buf1_ms_cnt_ch1),
   .buf2_ms_cnt_ch1_i        (buf2_ms_cnt_ch1),
   .buf1_ms_cnt_ch2_i        (buf1_ms_cnt_ch2),
   .buf2_ms_cnt_ch2_i        (buf2_ms_cnt_ch2),
+  .buf1_timestamp_ch1_i     (buf1_timestamp_ch1),
+  .buf2_timestamp_ch1_i     (buf2_timestamp_ch1),
+  .buf1_timestamp_ch2_i     (buf1_timestamp_ch2),
+  .buf2_timestamp_ch2_i     (buf2_timestamp_ch2),
 
   .curr_wp_ch1_i            (curr_wp_ch1),
   .curr_wp_ch2_i            (curr_wp_ch2),
@@ -568,10 +628,15 @@ scope_cfg #(
   .cfg_dma_buf_size_i       (cfg_dma_buf_size),
   .cfg_dma_ctrl_i           (cfg_dma_ctrl),
   .cfg_dma_ctrl_we_i        (cfg_dma_ctrl_we),
+  .cfg_timestamp_counter_i  (timestamp_counter_axi_r2),
+  .cfg_timestamp_init_i     (cfg_timestamp_init),
+  .cfg_timestamp_init_we_i  (cfg_timestamp_init_we),
 
   .cfg_dma_sts_o            (cfg_dma_sts),
   .buf1_ms_cnt_o            (buf1_ms_cnt_ch1),
   .buf2_ms_cnt_o            (buf2_ms_cnt_ch1),
+  .buf1_timestamp_o         (buf1_timestamp_ch1),
+  .buf2_timestamp_o         (buf2_timestamp_ch1),
 
   .curr_wp_o                (curr_wp_ch1),
   .diag1_o                  (diag1_ch1),
@@ -663,9 +728,14 @@ osc_top #(
   .cfg_dma_buf_size_i       (cfg_dma_buf_size),
   .cfg_dma_ctrl_i           (cfg_dma_ctrl),
   .cfg_dma_ctrl_we_i        (cfg_dma_ctrl_we),
+  .cfg_timestamp_counter_i  (timestamp_counter_axi_r2),
+  .cfg_timestamp_init_i     (cfg_timestamp_init),
+  .cfg_timestamp_init_we_i  (cfg_timestamp_init_we),
 
   .buf1_ms_cnt_o            (buf1_ms_cnt_ch2),
   .buf2_ms_cnt_o            (buf2_ms_cnt_ch2),
+  .buf1_timestamp_o         (buf1_timestamp_ch2),
+  .buf2_timestamp_o         (buf2_timestamp_ch2),
 
   .curr_wp_o                (curr_wp_ch2),
 

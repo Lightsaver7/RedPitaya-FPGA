@@ -23,6 +23,9 @@ module rp_dma_s2mm_ctrl
   input  wire [31:0]                reg_dst_addr1,
   input  wire [31:0]                reg_dst_addr2,
   input  wire [31:0]                reg_buf_size,
+  input  wire [63:0]                timestamp_counter,
+  input  wire [63:0]                timestamp_init,
+  input  wire                       timestamp_init_we,
   output wire                       ctl_start_o,
   input  wire                       ctl_start_ext,
   //
@@ -37,6 +40,8 @@ module rp_dma_s2mm_ctrl
   input  wire                       data_valid,
   output wire [31:0]                buf1_ms_cnt,
   output wire [31:0]                buf2_ms_cnt,
+  output reg  [63:0]                buf1_timestamp,
+  output reg  [63:0]                buf2_timestamp,
   input  wire                       buf_sel_in,
   output wire                       buf_sel_out,
   output reg                        fifo_dis,
@@ -127,6 +132,10 @@ reg                       axi_last_r, axi_last_r2;
 reg                       first_rst;
 
 wire                      full_immed;
+wire                      dma_req_start;
+wire                      buf1_timestamp_we;
+wire                      buf2_timestamp_we;
+wire [63:0]               timestamp_capture_value;
 
 assign m_axi_awaddr  = req_addr;
 assign m_axi_awsize  = $clog2(AXI_DATA_BITS/8);   
@@ -151,6 +160,10 @@ assign reg_sts[STS_CURR_BUF] = req_buf_addr_sel;
 assign buf_sel_out = req_buf_addr_sel_p1;
 assign ctl_start_o = (reg_ctrl[CTRL_STRT] == 1) | ctl_start_ext | bit_start; // create a pulse of length of 2 clock periods
 assign full_immed  = m_axi_wvalid & m_axi_wlast & next_buf_full;
+assign dma_req_start = m_axi_awvalid & m_axi_awready;
+assign buf1_timestamp_we = dma_req_start & (req_buf_addr_sel == 1'b0) & (req_addr == reg_dst_addr1);
+assign buf2_timestamp_we = dma_req_start & (req_buf_addr_sel == 1'b1) & (req_addr == reg_dst_addr2);
+assign timestamp_capture_value = timestamp_init_we ? timestamp_init : timestamp_counter;
 ////////////////////////////////////////////////////////////
 // Name : Request FIFO 
 // Stores the DMA requests.
@@ -418,6 +431,20 @@ begin
       transf_end <= 1'b1;
     else 
       transf_end <= 1'b0;
+  end
+end
+
+always @(posedge m_axi_aclk)
+begin
+  if (m_axi_aresetn == 0) begin
+    buf1_timestamp    <= 64'd0;
+    buf2_timestamp    <= 64'd0;
+  end else begin
+    if (buf1_timestamp_we)
+      buf1_timestamp <= timestamp_capture_value;
+
+    if (buf2_timestamp_we)
+      buf2_timestamp <= timestamp_capture_value;
   end
 end
 
