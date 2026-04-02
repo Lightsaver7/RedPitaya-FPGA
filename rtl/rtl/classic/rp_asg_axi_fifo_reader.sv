@@ -44,6 +44,8 @@ module rp_asg_axi_fifo_reader #(
 localparam int NUM_SAMPS = DW/16;
 localparam int BUF_WORDS = 2;
 localparam int PRE_LAST_SINGLE = (NUM_SAMPS >= 3) ? (NUM_SAMPS-3) : 0;
+localparam int PRELOAD_TIMER_W = (FIFO_PRELOAD_SIZE > 1) ? $clog2(FIFO_PRELOAD_SIZE + 1) : 1;
+localparam logic [PRELOAD_TIMER_W-1:0] PRELOAD_LIMIT = FIFO_PRELOAD_SIZE;
 
 typedef enum logic [2:0] {
   RD_IDLE,
@@ -72,7 +74,7 @@ logic          buf_rd_ptr;
 logic [1:0]    buf_count_q;
 logic          rd_pending_q;
 
-logic [6:0]    preload_timer;
+logic [PRELOAD_TIMER_W-1:0] preload_timer;
 logic          preload_done;
 logic          preload_done_q;
 logic          trig_pending;
@@ -397,7 +399,7 @@ always_ff @(posedge dac_clk_i) begin
   end
 end
 
-assign preload_done  = preload_timer >= FIFO_PRELOAD_SIZE;
+assign preload_done  = preload_timer >= PRELOAD_LIMIT;
 assign start_pulse_o = start_cycle && !preload_done_q;
 
 //---------------------------------------------------------------------------------
@@ -414,5 +416,4 @@ assign axi_state_o  =  {1'b0,            // [19:19]
                         1'b0,            // [2:2]
                         fifo_ready,      // [1:1]
                         1'b0};           // [0:0]
-
 endmodule
