@@ -29,6 +29,7 @@ logic            rfixed ;
 logic            rerr   ;
 logic            rrdym  ;
 logic            rrdys  ;
+logic            rlast  ;
 logic            rardy  ;
 
 
@@ -74,6 +75,7 @@ modport m (
   output rdata   ,
   output rerr    ,
   output rrdym   ,
+  output rlast   ,
   input  rrdys   ,
   output rardy
 );
@@ -106,6 +108,7 @@ modport s (
   input  rdata   ,
   input  rerr    ,
   input  rrdym   ,
+  input  rlast   ,
   output rrdys   ,
   input  rardy
 );
