@@ -223,18 +223,6 @@ localparam BUF1_TIMESTAMP_LO_CH1    = 12'h208;   // Buffer 1 timestamp channel 1
 localparam BUF1_TIMESTAMP_HI_CH1    = 12'h20C;   // Buffer 1 timestamp channel 1 high
 localparam BUF2_TIMESTAMP_LO_CH1    = 12'h210;   // Buffer 2 timestamp channel 1 low
 localparam BUF2_TIMESTAMP_HI_CH1    = 12'h214;   // Buffer 2 timestamp channel 1 high
-localparam BUF1_TIMESTAMP_LO_CH2    = 12'h218;   // Buffer 1 timestamp channel 2 low
-localparam BUF1_TIMESTAMP_HI_CH2    = 12'h21C;   // Buffer 1 timestamp channel 2 high
-localparam BUF2_TIMESTAMP_LO_CH2    = 12'h220;   // Buffer 2 timestamp channel 2 low
-localparam BUF2_TIMESTAMP_HI_CH2    = 12'h224;   // Buffer 2 timestamp channel 2 high
-localparam BUF1_TIMESTAMP_LO_CH3    = 12'h228;   // Buffer 1 timestamp channel 3 low
-localparam BUF1_TIMESTAMP_HI_CH3    = 12'h22C;   // Buffer 1 timestamp channel 3 high
-localparam BUF2_TIMESTAMP_LO_CH3    = 12'h230;   // Buffer 2 timestamp channel 3 low
-localparam BUF2_TIMESTAMP_HI_CH3    = 12'h234;   // Buffer 2 timestamp channel 3 high
-localparam BUF1_TIMESTAMP_LO_CH4    = 12'h238;   // Buffer 1 timestamp channel 4 low
-localparam BUF1_TIMESTAMP_HI_CH4    = 12'h23C;   // Buffer 1 timestamp channel 4 high
-localparam BUF2_TIMESTAMP_LO_CH4    = 12'h240;   // Buffer 2 timestamp channel 4 low
-localparam BUF2_TIMESTAMP_HI_CH4    = 12'h244;   // Buffer 2 timestamp channel 4 high
 localparam CLKSEL_REG               = 16'h1000;  // FPGA mode
 
 
@@ -316,18 +304,6 @@ assign axi_clk_regs =  (bus.addr[12-1:0] == DMA_CTRL_ADDR          ||
                         bus.addr[12-1:0] == BUF1_TIMESTAMP_HI_CH1   ||
                         bus.addr[12-1:0] == BUF2_TIMESTAMP_LO_CH1   ||
                         bus.addr[12-1:0] == BUF2_TIMESTAMP_HI_CH1   ||
-                        bus.addr[12-1:0] == BUF1_TIMESTAMP_LO_CH2   ||
-                        bus.addr[12-1:0] == BUF1_TIMESTAMP_HI_CH2   ||
-                        bus.addr[12-1:0] == BUF2_TIMESTAMP_LO_CH2   ||
-                        bus.addr[12-1:0] == BUF2_TIMESTAMP_HI_CH2   ||
-                        bus.addr[12-1:0] == BUF1_TIMESTAMP_LO_CH3   ||
-                        bus.addr[12-1:0] == BUF1_TIMESTAMP_HI_CH3   ||
-                        bus.addr[12-1:0] == BUF2_TIMESTAMP_LO_CH3   ||
-                        bus.addr[12-1:0] == BUF2_TIMESTAMP_HI_CH3   ||
-                        bus.addr[12-1:0] == BUF1_TIMESTAMP_LO_CH4   ||
-                        bus.addr[12-1:0] == BUF1_TIMESTAMP_HI_CH4   ||
-                        bus.addr[12-1:0] == BUF2_TIMESTAMP_LO_CH4   ||
-                        bus.addr[12-1:0] == BUF2_TIMESTAMP_HI_CH4   ||
                         bus.addr[12-1:0] == BUF1_LOST_SAMP_CNT_CH1 ||
                         bus.addr[12-1:0] == BUF2_LOST_SAMP_CNT_CH1 ||
                         bus.addr[12-1:0] == BUF1_LOST_SAMP_CNT_CH2 ||
@@ -633,18 +609,6 @@ begin
       BUF1_TIMESTAMP_HI_CH1  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[63:32];    end
       BUF2_TIMESTAMP_LO_CH1  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[31:0];     end
       BUF2_TIMESTAMP_HI_CH1  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[63:32];    end
-      BUF1_TIMESTAMP_LO_CH2  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[95:64];    end
-      BUF1_TIMESTAMP_HI_CH2  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[127:96];   end
-      BUF2_TIMESTAMP_LO_CH2  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[95:64];    end
-      BUF2_TIMESTAMP_HI_CH2  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[127:96];   end
-      BUF1_TIMESTAMP_LO_CH3  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[159:128];  end
-      BUF1_TIMESTAMP_HI_CH3  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[191:160];  end
-      BUF2_TIMESTAMP_LO_CH3  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[159:128];  end
-      BUF2_TIMESTAMP_HI_CH3  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[191:160];  end
-      BUF1_TIMESTAMP_LO_CH4  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[223:192];  end
-      BUF1_TIMESTAMP_HI_CH4  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf1_timestamp_i[255:224];  end
-      BUF2_TIMESTAMP_LO_CH4  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[223:192];  end
-      BUF2_TIMESTAMP_HI_CH4  : begin  reg_ack_axi = 1'b1; reg_rdat_axi = buf2_timestamp_i[255:224];  end
 
       CURR_WP_CH1            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[1*32-1:0*32];      end
       CURR_WP_CH2            : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_wp_i[2*32-1:1*32];      end
