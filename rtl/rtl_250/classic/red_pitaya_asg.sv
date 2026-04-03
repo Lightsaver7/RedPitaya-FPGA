@@ -168,7 +168,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
   .set_zero_i      ((set_a_zero || set_a_talm)    ),  // set output to zero
   .set_ncyc_i      ( set_a_ncyc                   ),  // set number of cycle
   .set_rnum_i      ( set_a_rnum                   ),  // set number of repetitions
-  .set_rdly_i      ( set_a_rdly                   ),  // set delay between repetitions
+  .set_rdly_i      ( set_a_rdly                   ),  // set period between burst starts in DAC clock cycles
   .set_rgate_i     ( set_a_rgate                  ),  // set external gated repetition
   .set_deb_len_i   ( set_deb_len                  ),  // set external trigger debouncer
   .set_seed_i      ( set_a_seed                   ),  // initial value of LFSR
@@ -219,7 +219,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chB
   .set_zero_i      ((set_b_zero || set_b_talm)    ),  // set output to zero
   .set_ncyc_i      ( set_b_ncyc                   ),  // set number of cycle
   .set_rnum_i      ( set_b_rnum                   ),  // set number of repetitions
-  .set_rdly_i      ( set_b_rdly                   ),  // set delay between repetitions
+  .set_rdly_i      ( set_b_rdly                   ),  // set period between burst starts in DAC clock cycles
   .set_rgate_i     ( set_b_rgate                  ),  // set external gated repetition
   .set_deb_len_i   ( set_deb_len                  ),  // set external trigger debouncer
   .set_seed_i      ( set_b_seed                   ),  // initial value of LFSR
