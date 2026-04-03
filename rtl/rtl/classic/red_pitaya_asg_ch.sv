@@ -72,7 +72,7 @@ module red_pitaya_asg_ch #(
    input                 set_zero_i      ,  //!< set output to zero
    input     [  16-1: 0] set_ncyc_i      ,  //!< set number of cycle
    input     [  16-1: 0] set_rnum_i      ,  //!< set number of repetitions
-   input     [  32-1: 0] set_rdly_i      ,  //!< set delay between repetitions
+   input     [  32-1: 0] set_rdly_i      ,  //!< set period between burst starts in DAC clock cycles
    input     [  20-1: 0] set_deb_len_i   ,  //!< set trigger debouncer
    input     [  32-1: 0] set_seed_i      ,  //!< initial value for LFSR
    input                 rand_en_i       ,  //!< enable random output
@@ -122,7 +122,6 @@ wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
 wire                  dac_npnt_sub_neg;
 wire                  axi_dac_do;
-wire                  axi_init;
 reg  [   5-1: 0] axi_dac_do_sr ;
 wire                  axi_last;
 wire                  axi_last_pre;
@@ -130,7 +129,6 @@ reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
 assign axi_dac_do = axi_state_o[1];
-assign axi_init   = axi_state_o[3];
 
 reg   [  16-1: 0] cyc_cnt   ;
 reg signed  [  28-1: 0] dac_mult  ;
@@ -209,7 +207,6 @@ wire             ext_trig_n   ;
 
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
-reg  [   8-1: 0] dly_tick     ;
 reg              init_run     ;
 
 reg  [  32-1: 0] set_step      ;  
@@ -221,12 +218,10 @@ wire             dac_trig     ;
 reg              dac_trigr    ;
 
 wire             do_read      ;
-wire             do_read_start;
 wire             do_read_end  ;
 wire             buf_cycle    ;
 
 assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
-assign do_read_start = set_axi_en_i ? axi_init    : dac_do;
 
 assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
@@ -275,7 +270,6 @@ always @(posedge dac_clk_i) begin
       cyc_cnt      <= 16'h0 ;
       rep_cnt      <= 16'h0 ;
       dly_cnt      <= 32'h0 ;
-      dly_tick     <=  8'h0 ;
       dac_do       <=  1'b0 ;
       dac_rep      <=  1'b0 ;
       trig_in      <=  1'b0 ;
@@ -285,19 +279,13 @@ always @(posedge dac_clk_i) begin
       set_step_lo  <= 32'h0 ;
    end
    else begin
-      // make 1us tick
-      if (do_read || (dly_tick == 8'd124))
-         dly_tick <= 8'h0 ;
-      else
-         dly_tick <= dly_tick + 8'h1 ;
-
-      // delay between repetitions 
-      if (set_rst_i || do_read_start)
-         dly_cnt <= set_rdly_i;
-      else if (|dly_cnt && (dly_tick == 8'd124)) begin// last value counter takes precedent
-         if(dly_cnt > 'h1 || (dly_cnt == 'h1))
-            dly_cnt <= dly_cnt - 32'h1 ;
-      end
+      // Count the requested start-to-start burst period directly in DAC clocks.
+      if (set_rst_i)
+         dly_cnt <= 32'h0;
+      else if (dac_trig)
+         dly_cnt <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
+      else if (dac_rep && |dly_cnt)
+         dly_cnt <= dly_cnt - 32'h1;
 
       // repetitions counter
       if (trig_in && !do_read)
