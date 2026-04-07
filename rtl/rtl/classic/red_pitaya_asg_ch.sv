@@ -112,6 +112,7 @@ reg   [  14-1: 0] dac_buf [0:(1<<RSZ)-1] ;
 reg   [  14-1: 0] dac_rd    ;
 wire  [  14-1: 0] dac_axi_rd;
 reg   [  14-1: 0] dac_rdat  ;
+reg                    dac_scale_bypass;
 
 reg   [ RSZ-1: 0] dac_rp    ;
 reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
@@ -136,6 +137,7 @@ reg signed  [  15-1: 0] dac_sum   ;
 
 rdly_mode_t        rdly_mode;
 reg   [  14-1: 0] set_last;
+reg               set_last_from_buf;
 reg   [   5-1: 0] lastval_sr;
 reg   [   5-1: 0] zero_sr;
 
@@ -157,12 +159,12 @@ begin
   dac_rp     <= dac_pnt[PNT_SIZE-1:16+32];
   dac_rd     <= dac_buf[dac_rp] ;
   casez (out_sel)
-    5'b00001: dac_rdat <= dac_rd;
-    5'b0001?: dac_rdat <= dac_axi_rd;
-    5'b001??: dac_rdat <= set_last;
-    5'b01???: dac_rdat <= lfsr_noise;
-    5'b1????: dac_rdat <= 14'h0;
-    default : dac_rdat <= set_first_i;
+    5'b00001: begin dac_rdat <= dac_rd;      dac_scale_bypass <= 1'b0;              end
+    5'b0001?: begin dac_rdat <= dac_axi_rd;  dac_scale_bypass <= 1'b0;              end
+    5'b001??: begin dac_rdat <= set_last;    dac_scale_bypass <= !set_last_from_buf; end
+    5'b01???: begin dac_rdat <= lfsr_noise;  dac_scale_bypass <= 1'b0;              end
+    5'b1????: begin dac_rdat <= 14'h0;       dac_scale_bypass <= 1'b0;              end
+    default : begin dac_rdat <= set_first_i; dac_scale_bypass <= 1'b1;              end
   endcase
 end
 
@@ -192,8 +194,9 @@ buf_rdata_o <= dac_buf[buf_addr_i] ;
 // scale and offset
 always @(posedge dac_clk_i)
 begin
-   dac_mult <= $signed(dac_rdat) * $signed({1'b0,set_amp_i}) ;
-   dac_sum  <= $signed(dac_mult[28-1:13]) + $signed(set_dc_i) ;
+   dac_mult <= dac_scale_bypass ? ($signed({{14{dac_rdat[13]}}, dac_rdat}) <<< 13) :
+                                  ($signed(dac_rdat) * $signed({1'b0,set_amp_i})) ;
+   dac_sum  <= $signed(dac_mult[28-1:13]) + $signed({set_dc_i[13], set_dc_i}) ;
    dac_o    <= ^dac_sum[15-1:15-2] ? {dac_sum[15-1], {13{~dac_sum[15-1]}}} : dac_sum[13:0];
 end
 
@@ -243,17 +246,21 @@ always_ff @(posedge dac_clk_i) begin
    if (!dac_rstn_i) begin
       init_run   <= 1'b1;
       set_last   <= 1'b0;
+      set_last_from_buf <= 1'b0;
       init_delay <= 1'b0;
    end else begin
       if (set_rst_i) begin
           init_run   <= 1'b1;
+          set_last_from_buf <= 1'b0;
           init_delay <= 1'b0;
       end else if (trig_in || init_delay != 1'b0) begin
           init_delay <= init_delay + 2'b1;
           set_last   <= set_last_i;
+          set_last_from_buf <= 1'b0;
       end else if (rdly_mode == RDLY_MODE_COPY) begin
           if (lastval_sr == 1'b1) begin
              set_last <= dac_rd;
+             set_last_from_buf <= 1'b1;
           end
       end
 
