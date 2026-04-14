@@ -129,8 +129,46 @@ wire  [  20-1:0 ] axi_a_state    , axi_b_state        ;
 wire  [  32-1:0 ] axi_a_err      , axi_b_err          ;
 wire  [  32-1:0 ] axi_a_transf   , axi_b_transf       ;
 
-reg   [  32-1: 0] step_a_hi      , step_b_hi   ;
-reg   [  32-1: 0] step_a_lo      , step_b_lo   ;
+wire  [  32-1: 0] step_a_hi      , step_b_hi         ;
+wire  [  32-1: 0] step_a_lo      , step_b_lo         ;
+wire  [  32-1: 0] step_a_hi_dac  , step_b_hi_dac     ;
+wire  [  32-1: 0] step_a_lo_dac  , step_b_lo_dac     ;
+
+sync #(.DW(32)) i_step_a_hi_sync (
+  .sclk_i  ( dac_clk_i     ),
+  .srstn_i ( dac_rstn_i    ),
+  .dclk_i  ( sys_clk       ),
+  .drstn_i ( sys_rstn      ),
+  .src_i   ( step_a_hi_dac ),
+  .dst_o   ( step_a_hi     )
+);
+
+sync #(.DW(32)) i_step_a_lo_sync (
+  .sclk_i  ( dac_clk_i     ),
+  .srstn_i ( dac_rstn_i    ),
+  .dclk_i  ( sys_clk       ),
+  .drstn_i ( sys_rstn      ),
+  .src_i   ( step_a_lo_dac ),
+  .dst_o   ( step_a_lo     )
+);
+
+sync #(.DW(32)) i_step_b_hi_sync (
+  .sclk_i  ( dac_clk_i     ),
+  .srstn_i ( dac_rstn_i    ),
+  .dclk_i  ( sys_clk       ),
+  .drstn_i ( sys_rstn      ),
+  .src_i   ( step_b_hi_dac ),
+  .dst_o   ( step_b_hi     )
+);
+
+sync #(.DW(32)) i_step_b_lo_sync (
+  .sclk_i  ( dac_clk_i     ),
+  .srstn_i ( dac_rstn_i    ),
+  .dclk_i  ( sys_clk       ),
+  .drstn_i ( sys_rstn      ),
+  .src_i   ( step_b_lo_dac ),
+  .dst_o   ( step_b_lo     )
+);
 
 red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
 (
@@ -147,6 +185,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
   .axi_sys         ( axi_a_sys                    ),  // AXI RAM interface      
   // buffer ctrl
   .sys_clk_i       ( sys_clk                      ),  // system clock
+  .sys_rstn_i      ( sys_rstn                     ),  // system reset
   .buf_we_i        ( buf_a_we                     ),  // buffer buffer write
   .buf_addr_i      ( buf_a_addr                   ),  // buffer address
   .buf_wdata_i     ( sys_wdata[14-1:0]            ),  // buffer write data
@@ -154,8 +193,10 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chA
   .buf_rpnt_o      ( buf_a_rpnt                   ),  // buffer current read pointer
   // configuration
   .set_size_i      ( set_a_size                   ),  // set table data size
-  .set_step_i      ( step_a_hi                    ),  // set pointer step
-  .set_step_lo_i   ( step_a_lo                    ),  // set pointer step
+  .set_step_i      ( set_a_step                   ),  // set pointer step
+  .set_step_lo_i   ( set_a_step_lo                ),  // set pointer step
+  .get_step_o      ( step_a_hi_dac                ),  // applied pointer step
+  .get_step_lo_o   ( step_a_lo_dac                ),  // applied pointer step
   .set_ofs_i       ( set_a_ofs                    ),  // set reset offset
   .set_rst_i       ( set_a_rst                    ),  // set FMS to reset
   .set_rdly_mode_i ( set_a_rdly_mode              ),  // set only once
@@ -198,6 +239,7 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chB
   .axi_sys         ( axi_b_sys                    ),  // AXI RAM interface      
   // buffer ctrl
   .sys_clk_i       ( sys_clk                      ),  // system clock
+  .sys_rstn_i      ( sys_rstn                     ),  // system reset
   .buf_we_i        ( buf_b_we                     ),  // buffer buffer write
   .buf_addr_i      ( buf_b_addr                   ),  // buffer address
   .buf_wdata_i     ( sys_wdata[14-1:0]            ),  // buffer write data
@@ -205,8 +247,10 @@ red_pitaya_asg_ch  #(.RSZ (RSZ)) chB
   .buf_rpnt_o      ( buf_b_rpnt                   ),  // buffer current read pointer
   // configuration
   .set_size_i      ( set_b_size                   ),  // set table data size
-  .set_step_i      ( step_b_hi                    ),  // set pointer step
-  .set_step_lo_i   ( step_b_lo                    ),  // set pointer step
+  .set_step_i      ( set_b_step                   ),  // set pointer step
+  .set_step_lo_i   ( set_b_step_lo                ),  // set pointer step
+  .get_step_o      ( step_b_hi_dac                ),  // applied pointer step
+  .get_step_lo_o   ( step_b_lo_dac                ),  // applied pointer step
   .set_ofs_i       ( set_b_ofs                    ),  // set reset offset
   .set_rst_i       ( set_b_rst                    ),  // set FMS to reset
   .set_rdly_mode_i ( set_b_rdly_mode              ),  // set only once
@@ -307,11 +351,6 @@ if (sys_rstn == 1'b0) begin
    rand_a_en     <=  1'b0     ;
    rand_b_en     <=  1'b0     ;
 
-   step_a_hi     <= 32'h0     ;
-   step_b_hi     <= 32'h0     ;
-   step_a_lo     <= 32'h0     ;
-   step_b_lo     <= 32'h0     ;
-
    set_a_axi_en    <= 1'b0 ;
    set_a_axi_start <= 32'h0;
    set_a_axi_stop  <= 32'h0;
@@ -399,16 +438,6 @@ end else begin
    if (sys_ren) begin
       buf_a_rpnt_rd <= {{32-RSZ-2{1'b0}},buf_a_rpnt,2'h0};
       buf_b_rpnt_rd <= {{32-RSZ-2{1'b0}},buf_b_rpnt,2'h0};
-   end
-
-   if (trig_a_sw_r || trig_b_sw_r) begin
-      step_a_hi <= set_a_step;
-      step_a_lo <= set_a_step_lo;
-   end
-
-   if (trig_a_sw_r || trig_b_sw_r) begin
-      step_b_hi <= set_b_step;
-      step_b_lo <= set_b_step_lo;
    end
 
    ren_dly <= {ren_dly[3-2:0], sys_ren};

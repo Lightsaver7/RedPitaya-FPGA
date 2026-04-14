@@ -48,6 +48,7 @@ module red_pitaya_asg_ch #(
    output                trig_done_o     ,  //!< trigger event
    // buffer ctrl
    input                 sys_clk_i       ,  //!< system clock for buffer access
+   input                 sys_rstn_i      ,  //!< system reset for configuration CDC
    input                 buf_we_i        ,  //!< buffer write enable
    input      [ 14-1: 0] buf_addr_i      ,  //!< buffer address
    input      [ 14-1: 0] buf_wdata_i     ,  //!< buffer write data
@@ -59,6 +60,8 @@ module red_pitaya_asg_ch #(
    input     [RSZ+15: 0] set_size_i      ,  //!< set table data size
    input     [  32-1: 0] set_step_i      ,  //!< set pointer step
    input     [  32-1: 0] set_step_lo_i   ,  //!< set pointer step, low frequency
+   output    [  32-1: 0] get_step_o      ,  //!< applied pointer step
+   output    [  32-1: 0] get_step_lo_o   ,  //!< applied pointer step, low frequency
    input     [  32-1: 0] set_ofs_i       ,  //!< set reset offset
    input                 set_rst_i       ,  //!< set FSM to reset
    input                 set_rdly_mode_i ,  //!< sets the behavior of a constant signal before and after burst
@@ -213,9 +216,10 @@ reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
 reg              init_run     ;
 
-reg  [  32-1: 0] set_step      ;  
-reg  [  32-1: 0] set_step_lo      ;  
-
+reg  [  32-1: 0] set_step         ;
+reg  [  32-1: 0] set_step_lo      ;
+wire [  32-1: 0] set_step_cfg     ;
+wire [  32-1: 0] set_step_lo_cfg  ;
 
 reg              dac_rep      ;
 wire             dac_trig     ;
@@ -230,6 +234,24 @@ assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
 assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
 assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+
+sync #(.DW(32)) i_set_step_sync (
+  .sclk_i  ( sys_clk_i    ),
+  .srstn_i ( sys_rstn_i   ),
+  .dclk_i  ( dac_clk_i    ),
+  .drstn_i ( dac_rstn_i   ),
+  .src_i   ( set_step_i   ),
+  .dst_o   ( set_step_cfg )
+);
+
+sync #(.DW(32)) i_set_step_lo_sync (
+  .sclk_i  ( sys_clk_i       ),
+  .srstn_i ( sys_rstn_i      ),
+  .dclk_i  ( dac_clk_i       ),
+  .drstn_i ( dac_rstn_i      ),
+  .src_i   ( set_step_lo_i   ),
+  .dst_o   ( set_step_lo_cfg )
+);
 
 always_ff @(posedge dac_clk_i) begin
    if (dac_rstn_i == 1'b0) begin
@@ -322,8 +344,8 @@ always @(posedge dac_clk_i) begin
       endcase
 
       if (trig_in) begin
-        set_step <= set_step_i;
-        set_step_lo <= set_step_lo_i;
+        set_step    <= set_step_cfg;
+        set_step_lo <= set_step_lo_cfg;
       end
 
       // in cycle mode
@@ -368,6 +390,8 @@ end
 
 assign dac_npnt = dac_do ? dac_pnt + {set_step[RSZ+15:0],set_step_lo} : dac_pnt;
 assign trig_done_o = !dac_rep && trig_in;
+assign get_step_o = set_step;
+assign get_step_lo_o = set_step_lo;
 assign err_cnt_o = 32'h0;
 assign transf_cnt_o = 32'h0;
 
