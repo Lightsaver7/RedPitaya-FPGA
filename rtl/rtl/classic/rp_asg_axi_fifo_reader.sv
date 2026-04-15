@@ -27,6 +27,7 @@ module rp_asg_axi_fifo_reader #(
   output logic [20-1:0]       axi_state_o,
   output logic               axi_last_o,
   output logic               axi_last_pre_o,
+  output logic               axi_first_o,
 
   // start pulse to request AXI read
   output logic               start_pulse_o,
@@ -89,6 +90,10 @@ logic          start_cycle;
 logic          restart_cycle;
 logic          advance_cycle;
 logic          cycle_reload;
+// Marks the first valid DAC sample after each AXI cycle reload. The ASG
+// repetition delay uses this to ignore the one-time FIFO preload latency.
+logic          burst_first_pending_q;
+logic          burst_first_sample;
 logic          consume_word;
 logic          cycle_done;
 logic          stop_cycle;
@@ -335,6 +340,18 @@ assign output_valid = fifo_ready && !buf_empty;
 assign consume_word = output_valid && dec_step && (sample_index == (NUM_SAMPS-1));
 assign cycle_done  = consume_word && (words_left_q == {{(AW-1){1'b0}},1'b1});
 assign stop_cycle  = cycle_done && (cycle_cnt_q == 16'h1) && !(trig_req || repeat_req);
+assign burst_first_sample = burst_first_pending_q && output_valid;
+assign axi_first_o = burst_first_sample;
+
+always_ff @(posedge dac_clk_i) begin
+  if (!dac_rstn_i || set_rst_i) begin
+    burst_first_pending_q <= 1'b0;
+  end else if (cycle_reload) begin
+    burst_first_pending_q <= 1'b1;
+  end else if (burst_first_sample) begin
+    burst_first_pending_q <= 1'b0;
+  end
+end
 
 always_ff @(posedge dac_clk_i) begin
   if (!dac_rstn_i || set_rst_i) begin

@@ -127,6 +127,7 @@ wire                  axi_dac_do;
 reg  [   5-1: 0] axi_dac_do_sr ;
 wire                  axi_last;
 wire                  axi_last_pre;
+wire                  axi_first;
 reg              dac_do       ;
 reg  [   5-1: 0] dac_do_sr    ;
 
@@ -211,6 +212,9 @@ wire             ext_trig_n   ;
 
 reg  [  16-1: 0] rep_cnt      ;
 reg  [  32-1: 0] dly_cnt      ;
+// Set after the first real output sample so AXI preload time is not counted
+// as part of the requested start-to-start burst period.
+reg              dly_started  ;
 reg              init_run     ;
 
 reg  [  32-1: 0] set_step      ;  
@@ -224,12 +228,15 @@ reg              dac_trigr    ;
 wire             do_read      ;
 wire             do_read_end  ;
 wire             buf_cycle    ;
+wire             dly_start    ;
 
 assign do_read       = set_axi_en_i ? axi_dac_do  : dac_do;
 
 assign do_read_end   = set_axi_en_i ? (set_axi_dec_i == 1 ? axi_last && cyc_cnt == 1 : axi_dac_do_sr[0] && !axi_dac_do) : 
                                     dac_do_sr[1:0] == 2'b10;
 assign buf_cycle     = set_axi_en_i ? axi_last    : ({1'b0,dac_pntp} > {1'b0,dac_pnt});
+// AXI starts producing samples only after FIFO preload; non-AXI starts on dac_trig.
+assign dly_start     = set_axi_en_i ? axi_first   : dac_trig;
 
 always_ff @(posedge dac_clk_i) begin
    if (dac_rstn_i == 1'b0) begin
@@ -278,6 +285,7 @@ always @(posedge dac_clk_i) begin
       cyc_cnt      <= 16'h0 ;
       rep_cnt      <= 16'h0 ;
       dly_cnt      <= 32'h0 ;
+      dly_started  <=  1'b0 ;
       dac_do       <=  1'b0 ;
       dac_rep      <=  1'b0 ;
       trig_in      <=  1'b0 ;
@@ -287,13 +295,21 @@ always @(posedge dac_clk_i) begin
       set_step_lo  <= 32'h0 ;
    end
    else begin
-      // Count the requested start-to-start burst period directly in DAC clocks.
-      if (set_rst_i)
+      // Count the requested start-to-start burst period from the first output sample.
+      if (set_rst_i) begin
          dly_cnt <= 32'h0;
-      else if (dac_trig)
-         dly_cnt <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
-      else if (dac_rep && |dly_cnt)
-         dly_cnt <= dly_cnt - 32'h1;
+         dly_started <= 1'b0;
+      end else begin
+         if (dly_start)
+            dly_cnt <= (set_rdly_i > 32'h0) ? (set_rdly_i - 32'h1) : 32'h0;
+         else if (dac_rep && dly_started && |dly_cnt)
+            dly_cnt <= dly_cnt - 32'h1;
+
+         if (dly_start)
+            dly_started <= 1'b1;
+         else if (dac_trig)
+            dly_started <= 1'b0;
+      end
 
       // repetitions counter
       if (trig_in && !do_read)
@@ -340,7 +356,7 @@ always @(posedge dac_clk_i) begin
    end
 end
 
-wire rep_arm   = dac_rep && |rep_cnt && (dly_cnt == 32'h0);
+wire rep_arm   = dac_rep && |rep_cnt && dly_started && (dly_cnt == 32'h0);
 wire rep_idle  = (cyc_cnt == 16'h0) && ~dac_do && !buf_cycle;
 wire cycle_end = set_axi_en_i ? axi_last : (~dac_npnt_sub_neg);
 wire rep_end   = (cyc_cnt == 16'h1) && cycle_end;
@@ -439,7 +455,8 @@ rp_asg_axi #(
   .set_cyc_cnt_i   ( set_ncyc_i        ),
   .axi_state_o     ( axi_state_o       ),
   .axi_last_o      ( axi_last          ),
-  .axi_last_pre_o  ( axi_last_pre      )
+  .axi_last_pre_o  ( axi_last_pre      ),
+  .axi_first_o     ( axi_first         )
 );
 
 //---------------------------------------------------------------------------------
