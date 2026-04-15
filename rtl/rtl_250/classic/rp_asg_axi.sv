@@ -30,7 +30,8 @@ module rp_asg_axi #(
    input      [  16-1: 0] set_cyc_cnt_i   ,  //!< limit number of writes
    output     [  20-1: 0] axi_state_o     ,  //!< AXI state
    output                 axi_last_o      ,  //!< AXI final sample
-   output                 axi_last_pre_o     //!< AXI pre-final sample
+   output                 axi_last_pre_o  ,  //!< AXI pre-final sample
+   output                 axi_first_o        //!< AXI first sample
 );
 
 //---------------------------------------------------------------------------------
@@ -119,6 +120,7 @@ rp_asg_axi_fifo_reader #(
   .axi_state_o     (axi_state_o),
   .axi_last_o      (axi_last_o),
   .axi_last_pre_o  (axi_last_pre_o),
+  .axi_first_o     (axi_first_o),
   .start_pulse_o   (start_pulse_dac),
   .dat_fifo_out    (dat_fifo_out),
   .dat_rd_valid    (dat_rd_valid),
