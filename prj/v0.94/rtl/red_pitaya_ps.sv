@@ -474,7 +474,7 @@ system system_i
   .Vaux9_v_n (vinn_i[3]),  .Vaux9_v_p (vinp_i[3]),
   .Vp_Vn_v_n (vinn_i[4]),  .Vp_Vn_v_p (vinp_i[4]),
 `ifdef SIMULATION
-  .IRQ_F2P           ({14'h0, scope_irq_i, 1'b0}),
+  .IRQ_F2P           ({13'h0, scope_irq_i, 2'b0}),
 `else
   .scope_irq         (scope_irq_i     ),
 `endif

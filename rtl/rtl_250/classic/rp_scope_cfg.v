@@ -43,6 +43,7 @@ module rp_scope_cfg #(
    input      [   2*8  -1: 0] adc_state_ext_i      ,
    input      [   2*8  -1: 0] axi_state_ext_i      ,
    input      [   2*8  -1: 0] trg_state_ext_i      ,
+   input      [       2-1: 0] irq_sts_i            ,
 
    input      [   4*RSZ-1: 0] adc_wp_cur_i         ,
     input      [   4*RSZ-1: 0] adc_wp_trig_i        ,
@@ -84,7 +85,9 @@ module rp_scope_cfg #(
    output     [   4*32 -1: 0] set_axi_start_o      ,
    output     [   4*32 -1: 0] set_axi_stop_o       ,
    output     [   4*32 -1: 0] set_axi_dly_o        ,
-   output     [       4-1: 0] set_axi_en_o
+   output     [       4-1: 0] set_axi_en_o         ,
+   output reg [       2-1: 0] irq_mask_o           ,
+   output reg [       2-1: 0] irq_clr_o
 
 
 );
@@ -301,7 +304,11 @@ if (adc_rstn_i == 1'b0) begin
   set_axi_stop           <= {4{32'd0}}      ;
   set_axi_dly            <= {4{32'd0}}      ;
   set_axi_en             <=  4'h0           ;
+  irq_mask_o             <=  2'b0           ;
+  irq_clr_o              <=  2'b0           ;
 end else begin
+  irq_clr_o <= 2'b0;
+
   set_tresh[DW*1-1:DW*0] <= cfg_decode_trig_level(set_tresh_raw[DW*1-1:DW*0], set_hres_en[0]);
   set_tresh[DW*2-1:DW*1] <= cfg_decode_trig_level(set_tresh_raw[DW*2-1:DW*1], set_hres_en[1]);
   set_tresh[DW*3-1:DW*2] <= cfg_decode_trig_level(set_tresh_raw[DW*3-1:DW*2], set_hres_en[2]);
@@ -341,6 +348,8 @@ end else begin
     if (sys_addr[19:0]==20'h90 )   set_deb_len                <= sys_wdata[20-1:0] ;
     // Offset 0x94 reserved for trigger unlock bit
     if (sys_addr[19:0]==20'h98 )   set_filt_byp               <= sys_wdata[ 4-1:0] ;
+    if (sys_addr[19:0]==20'hAC )   irq_mask_o                 <= sys_wdata[ 2-1:0] ;
+    if (sys_addr[19:0]==20'hB0 )   irq_clr_o                  <= sys_wdata[ 2-1:0] ;
 
     if (sys_addr[19:0]==20'h110)   set_dly[32*2-1:32*1]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h114)   set_dec[17*2-1:17*1]       <= sys_wdata[17-1:0] ;    
@@ -434,6 +443,8 @@ end else begin
     20'h00090 : begin sys_ack <= sys_en;          sys_rdata <= {{32-20{1'b0}},  set_deb_len}                    ; end
     // Offset 0x94 reserved for trigger unlock bit
     20'h00098 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 4{1'b0}},  set_filt_byp}                   ; end
+    20'h000AC : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}},  irq_mask_o}                     ; end
+    20'h000B0 : begin sys_ack <= sys_en;          sys_rdata <= {{32- 2{1'b0}},  irq_sts_i}                      ; end
 
     20'h00110 : begin sys_ack <= sys_en;          sys_rdata <=                  set_dly[32*2-1:32*1]            ; end
     20'h00114 : begin sys_ack <= sys_en;          sys_rdata <= {{32-17{1'b0}},  set_dec[17*2-1:17*1]}           ; end
