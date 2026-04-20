@@ -26,6 +26,25 @@
         };
 };
 
+&amba {
+        rp_oscilloscope: rp_oscilloscope@1000000 {
+                compatible = "generic-uio", "xlnx,rp-oscilloscope-1.16";
+                /*
+                 * Keep the dedicated IRQ UIO separate from the legacy
+                 * api@40000000 device to avoid overlapping reg resources.
+                 * Userspace still accesses scope control registers via
+                 * /dev/uio0 and waits for interrupts on this dedicated
+                 * oscilloscope /dev/uio1 node.
+                 */
+                reg = <0x01000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 31 4>;
+                status = "okay";
+        };
+};
+
 / {
          fragment@9 {
                 target = <&can0>;
@@ -41,5 +60,3 @@
                 };
         };
 };
-
-
