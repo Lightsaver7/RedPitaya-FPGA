@@ -313,6 +313,10 @@ assign trig_ext   = gpio.i[GDW] & ~(daisy_mode[0] & daisy_trig);
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
+wire scope_irq_0_1;
+wire scope_irq_2_3;
+wire scope_irq = scope_irq_0_1 | scope_irq_2_3;
+
 red_pitaya_ps ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
@@ -342,6 +346,7 @@ red_pitaya_ps ps (
   // ADC analog inputs
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
+  .scope_irq_i   (scope_irq   ),
   // CAN0
   .CAN0_rx       (CAN0_rx     ),
   .CAN0_tx       (CAN0_tx     ),
@@ -659,6 +664,7 @@ rp_scope_com #(
   .axi_state_i   (axi_state_ch_2_3),
   .trg_state_o   (trg_state_ch_0_1),
   .trg_state_i   (trg_state_ch_2_3),
+  .scope_irq_o   (scope_irq_0_1),
   // AXI0 master                 // AXI1 master
   .axi_waddr_o  ({axi1_sys.waddr,  axi0_sys.waddr} ),
   .axi_wdata_o  ({axi1_sys.wdata,  axi0_sys.wdata} ),
@@ -701,6 +707,7 @@ rp_scope_com #(
   .axi_state_i   (axi_state_ch_0_1),
   .trg_state_o   (trg_state_ch_2_3),
   .trg_state_i   (trg_state_ch_0_1),
+  .scope_irq_o   (scope_irq_2_3),
   // AXI2 master                 // AXI3 master
   .axi_waddr_o  ({axi3_sys.waddr,  axi2_sys.waddr} ),
   .axi_wdata_o  ({axi3_sys.wdata,  axi2_sys.wdata} ),
