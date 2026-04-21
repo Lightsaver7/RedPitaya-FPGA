@@ -333,6 +333,7 @@ assign pll_lo_o  = 1'b1;
 ////////////////////////////////////////////////////////////////////////////////
 
 wire scope_irq;
+wire [1:0] scope_irq_ch;
 
 red_pitaya_ps_ll ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
@@ -364,6 +365,8 @@ red_pitaya_ps_ll ps (
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
   .scope_irq_i   (scope_irq   ),
+  .scope_irq_ch1_i(scope_irq_ch[0]),
+  .scope_irq_ch2_i(scope_irq_ch[1]),
   // CAN0
   .CAN0_rx       (CAN0_rx     ),
   .CAN0_tx       (CAN0_tx     ),
@@ -698,6 +701,7 @@ rp_scope_com #(
   .trg_state_o   (trg_state_ch_0_1),
   .trg_state_i   (trg_state_ch_2_3),
   .scope_irq_o   (scope_irq),
+  .scope_irq_ch_o(scope_irq_ch),
   // AXI0 master                 // AXI1 master
   .axi_waddr_o  ({axi1_sys.waddr,  axi0_sys.waddr} ),
   .axi_wdata_o  ({axi1_sys.wdata,  axi0_sys.wdata} ),

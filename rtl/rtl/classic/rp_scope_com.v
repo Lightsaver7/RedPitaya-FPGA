@@ -89,6 +89,7 @@ module rp_scope_com #(
    output     [     16-1: 0] trg_state_o    ,
    input      [     16-1: 0] trg_state_i    ,
    output                    scope_irq_o    ,
+   output     [N_CH   -1: 0] scope_irq_ch_o ,
 
    // System bus
    input      [     32-1: 0] sys_addr       ,  // bus saddress
@@ -134,12 +135,18 @@ wire [       4-1: 0] set_axi_en        ;
 wire [       4-1: 0] indep_mode        ;
 wire [       2-1: 0] irq_mask          ;
 wire [       2-1: 0] irq_clr           ;
+wire [       8-1: 0] split_irq_mask    ;
+wire [       8-1: 0] split_irq_clr     ;
 
 wire [   4*8  -1: 0] axi_state    ;
 wire [   4*8  -1: 0] adc_state    ;
 wire [   4*8  -1: 0] trg_state    ;
 wire [       4-1: 0] adc_dly_do_ch;
 wire [       2-1: 0] irq_evt      ;
+wire [       4-1: 0] irq_evt_trig_ch;
+wire [       4-1: 0] irq_evt_fill_ch;
+wire [       8-1: 0] split_irq_evt;
+wire [       8-1: 0] split_irq_auto_clr;
 
 wire [   4*RSZ-1: 0] adc_wp_cur   ;
 wire [   4*RSZ-1: 0] adc_wp_trig  ;
@@ -170,20 +177,26 @@ wire [       4-1: 0] adc_dv_del_p ;
 reg  [       4-1: 0] adc_trig_d   ;
 reg  [       4-1: 0] adc_dly_do_ch_d;
 reg  [       2-1: 0] irq_sts      ;
+reg  [       8-1: 0] split_irq_sts;
 
 assign sys_en = sys_wen | sys_ren;
 
 assign adc_state_o = adc_state[15:0];
 assign axi_state_o = axi_state[15:0];
 assign trg_state_o = trg_state[15:0];
-assign irq_evt[0] = |(adc_trig & ~adc_trig_d);
-assign irq_evt[1] = |(adc_dly_do_ch_d & ~adc_dly_do_ch);
+assign irq_evt_trig_ch = adc_trig & ~adc_trig_d;
+assign irq_evt_fill_ch = adc_dly_do_ch_d & ~adc_dly_do_ch;
+assign irq_evt[0] = |(irq_evt_trig_ch & ~indep_mode);
+assign irq_evt[1] = |(irq_evt_fill_ch & ~indep_mode);
+assign split_irq_evt = {irq_evt_fill_ch & indep_mode, irq_evt_trig_ch & indep_mode};
+assign split_irq_auto_clr = {(adc_rst_do | adc_arm_do), (adc_rst_do | adc_arm_do)};
 
 always @(posedge adc_clk_i[0]) begin
   if (adc_rstn_i[0] == 1'b0) begin
     adc_trig_d      <= 4'h0;
     adc_dly_do_ch_d <= 4'h0;
     irq_sts         <= 2'b0;
+    split_irq_sts   <= 8'h0;
   end else begin
     adc_trig_d      <= adc_trig;
     adc_dly_do_ch_d <= adc_dly_do_ch;
@@ -192,6 +205,8 @@ always @(posedge adc_clk_i[0]) begin
       irq_sts <= 2'b0;
     else
       irq_sts <= (irq_sts & ~irq_clr) | irq_evt;
+
+    split_irq_sts <= (split_irq_sts & ~split_irq_auto_clr & ~split_irq_clr) | split_irq_evt;
   end
 end
 
@@ -527,6 +542,7 @@ rp_scope_cfg #(
   .axi_state_i        ( axi_state       ),
   .trg_state_i        ( trg_state       ),
   .irq_sts_i          ( irq_sts         ),
+  .split_irq_sts_i    ( split_irq_sts   ),
 
   .adc_state_ext_i    ( adc_state_i     ),
   .axi_state_ext_i    ( axi_state_i     ),
@@ -574,7 +590,9 @@ rp_scope_cfg #(
   .set_axi_dly_o      ( set_axi_dly     ),
   .set_axi_en_o       ( set_axi_en      ),
   .irq_mask_o         ( irq_mask        ),
-  .irq_clr_o          ( irq_clr         )
+  .irq_clr_o          ( irq_clr         ),
+  .split_irq_mask_o   ( split_irq_mask  ),
+  .split_irq_clr_o    ( split_irq_clr   )
 );
 
 assign axi_clk    = adc_clk_i ;
@@ -588,5 +606,13 @@ assign daisy_trig_o   = adc_trig[0];
 assign scope_irq_o    = |(irq_sts & irq_mask);
 
 assign trig_ext_asg_o = {asg_trig_n, asg_trig_p, ext_trig_n, ext_trig_p};
+
+generate
+for (genvar GI = 0; GI < N_CH; GI = GI + 1) begin : gen_scope_irq_ch
+  assign scope_irq_ch_o[GI] = indep_mode[GI] &
+                              ((split_irq_sts[GI] & split_irq_mask[GI]) |
+                               (split_irq_sts[GI+4] & split_irq_mask[GI+4]));
+end
+endgenerate
 
 endmodule

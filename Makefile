@@ -93,6 +93,12 @@ ifeq ($(PRJ),stream_app)
     endif
 endif
 
+ifeq ($(PRJ),v0.94)
+    ifeq ($(FPGA_VERSION),z20_125_4ch)
+        DTS_IP_PATH := dts_4ch
+    endif
+endif
+
 $(DEVICE_TREE): $(XSA)
 	xsct red_pitaya_hsi_dts.tcl  $(PRJ) DTS_VER=$(DTS_VER) MODEL=$(MODEL)
 
