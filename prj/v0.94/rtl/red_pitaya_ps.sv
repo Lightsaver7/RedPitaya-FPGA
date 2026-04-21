@@ -62,6 +62,10 @@ module red_pitaya_ps (
   input  logic  [ 5-1:0] vinp_i             ,  // voltages p
   input  logic  [ 5-1:0] vinn_i             ,  // voltages n
   input  logic           scope_irq_i        ,
+  input  logic           scope_irq_ch1_i    ,
+  input  logic           scope_irq_ch2_i    ,
+  input  logic           scope_irq_ch3_i    ,
+  input  logic           scope_irq_ch4_i    ,
   // GPIO
   gpio_if.m              gpio,
   // system read/write channel
@@ -474,9 +478,13 @@ system system_i
   .Vaux9_v_n (vinn_i[3]),  .Vaux9_v_p (vinp_i[3]),
   .Vp_Vn_v_n (vinn_i[4]),  .Vp_Vn_v_p (vinp_i[4]),
 `ifdef SIMULATION
-  .IRQ_F2P           ({13'h0, scope_irq_i, 2'b0}),
+  .IRQ_F2P           ({9'h0, scope_irq_ch4_i, scope_irq_ch3_i, scope_irq_ch2_i, scope_irq_ch1_i, scope_irq_i, 2'b0}),
 `else
   .scope_irq         (scope_irq_i     ),
+  .scope_irq_ch1     (scope_irq_ch1_i ),
+  .scope_irq_ch2     (scope_irq_ch2_i ),
+  .scope_irq_ch3     (scope_irq_ch3_i ),
+  .scope_irq_ch4     (scope_irq_ch4_i ),
 `endif
   // GP0
   .M_AXI_GP0_ACLK    (axi_gp.ACLK   ),

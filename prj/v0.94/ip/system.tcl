@@ -363,6 +363,10 @@ proc create_root_design { parentCell } {
   set S_AXI_HP2_aclk [ create_bd_port -dir I -type clk -freq_hz $::hp2_clk_freq S_AXI_HP2_aclk ]
   set S_AXI_HP3_aclk [ create_bd_port -dir I -type clk -freq_hz $::hp3_clk_freq S_AXI_HP3_aclk ]
   set scope_irq [ create_bd_port -dir I scope_irq ]
+  set scope_irq_ch1 [ create_bd_port -dir I scope_irq_ch1 ]
+  set scope_irq_ch2 [ create_bd_port -dir I scope_irq_ch2 ]
+  set scope_irq_ch3 [ create_bd_port -dir I scope_irq_ch3 ]
+  set scope_irq_ch4 [ create_bd_port -dir I scope_irq_ch4 ]
 
   # Create instance: axi_protocol_converter_0, and set properties
   set axi_protocol_converter_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_protocol_converter:2.1 axi_protocol_converter_0 ]
@@ -477,11 +481,14 @@ proc create_root_design { parentCell } {
   connect_bd_net -net s_axi_hp2_aclk [get_bd_ports S_AXI_HP2_aclk] [get_bd_pins processing_system7/S_AXI_HP2_ACLK]
   connect_bd_net -net s_axi_hp3_aclk [get_bd_ports S_AXI_HP3_aclk] [get_bd_pins processing_system7/S_AXI_HP3_ACLK]
   connect_bd_net -net scope_irq_0 [get_bd_ports scope_irq] [get_bd_pins intr_concat/In2]
+  connect_bd_net -net scope_irq_ch1_0 [get_bd_ports scope_irq_ch1] [get_bd_pins intr_concat/In3]
+  connect_bd_net -net scope_irq_ch2_0 [get_bd_ports scope_irq_ch2] [get_bd_pins intr_concat/In4]
+  connect_bd_net -net scope_irq_ch3_0 [get_bd_ports scope_irq_ch3] [get_bd_pins intr_concat/In5]
+  connect_bd_net -net scope_irq_ch4_0 [get_bd_ports scope_irq_ch4] [get_bd_pins intr_concat/In6]
   connect_bd_net -net xadc_ip2intc_irpt [get_bd_pins intr_concat/In0] [get_bd_pins xadc/ip2intc_irpt]
   connect_bd_net -net intr_concat_dout [get_bd_pins intr_concat/dout] [get_bd_pins processing_system7/IRQ_F2P]
   connect_bd_net -net xlconstant_dout [get_bd_pins proc_sys_reset_3/aux_reset_in] [get_bd_pins xlconstant/dout]
-  connect_bd_net -net intr_zero_dout [get_bd_pins intr_zero/dout] [get_bd_pins intr_concat/In1] [get_bd_pins intr_concat/In3] \
-  [get_bd_pins intr_concat/In4] [get_bd_pins intr_concat/In5] [get_bd_pins intr_concat/In6] [get_bd_pins intr_concat/In7] \
+  connect_bd_net -net intr_zero_dout [get_bd_pins intr_zero/dout] [get_bd_pins intr_concat/In1] [get_bd_pins intr_concat/In7] \
   [get_bd_pins intr_concat/In8] [get_bd_pins intr_concat/In9] [get_bd_pins intr_concat/In10] [get_bd_pins intr_concat/In11] \
   [get_bd_pins intr_concat/In12] [get_bd_pins intr_concat/In13] [get_bd_pins intr_concat/In14] [get_bd_pins intr_concat/In15]
 
