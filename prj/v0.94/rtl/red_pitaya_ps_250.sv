@@ -61,6 +61,7 @@ module red_pitaya_ps_250 (
   // XADC
   input  logic  [ 5-1:0] vinp_i             ,  // voltages p
   input  logic  [ 5-1:0] vinn_i             ,  // voltages n
+  input  logic           scope_irq_i        ,
   // GPIO
   gpio_if.m              gpio,
   // SPI
@@ -474,6 +475,11 @@ system system_i
   .Vaux8_v_n (vinn_i[0]),  .Vaux8_v_p (vinp_i[0]),
   .Vaux9_v_n (vinn_i[3]),  .Vaux9_v_p (vinp_i[3]),
   .Vp_Vn_v_n (vinn_i[4]),  .Vp_Vn_v_p (vinp_i[4]),
+`ifdef SIMULATION
+  .IRQ_F2P           ({13'h0, scope_irq_i, 2'b0}),
+`else
+  .scope_irq         (scope_irq_i     ),
+`endif
   // GP0
   .M_AXI_GP0_ACLK    (axi_gp.ACLK   ),
 //  .M_AXI_GP0_ARESETn (axi_gp.ARESETn),
