@@ -153,6 +153,10 @@ wire [   4*RSZ-1: 0] adc_wp_trig  ;
 wire [   4*32 -1: 0] adc_we_cnt   ;
 wire [   4*32 -1: 0] axi_wp_cur   ;
 wire [   4*32 -1: 0] axi_wp_trig  ;
+wire [      64-1: 0] cfg_timestamp_init;
+wire                 cfg_timestamp_init_we;
+reg  [      64-1: 0] curr_timestamp;
+reg  [   4*64 -1: 0] trig_timestamp;
 
 wire [       4-1: 0] bram_ack     ;
 wire [   4*DW -1: 0] bram_rd_dat  ;
@@ -197,7 +201,23 @@ always @(posedge adc_clk_i[0]) begin
     adc_dly_do_ch_d <= 4'h0;
     irq_sts         <= 2'b0;
     split_irq_sts   <= 8'h0;
+    curr_timestamp  <= 64'h0;
+    trig_timestamp  <= {4{64'h0}};
   end else begin
+    if (cfg_timestamp_init_we)
+      curr_timestamp <= cfg_timestamp_init;
+    else
+      curr_timestamp <= curr_timestamp + 64'd1;
+
+    if (irq_evt_trig_ch[0])
+      trig_timestamp[63:0] <= curr_timestamp;
+    if (irq_evt_trig_ch[1])
+      trig_timestamp[127:64] <= curr_timestamp;
+    if (irq_evt_trig_ch[2])
+      trig_timestamp[191:128] <= curr_timestamp;
+    if (irq_evt_trig_ch[3])
+      trig_timestamp[255:192] <= curr_timestamp;
+
     adc_trig_d      <= adc_trig;
     adc_dly_do_ch_d <= adc_dly_do_ch;
 
@@ -554,6 +574,8 @@ rp_scope_cfg #(
 
   .axi_wp_cur_i       ( axi_wp_cur      ),
   .axi_wp_trig_i      ( axi_wp_trig     ),
+  .curr_timestamp_i   ( curr_timestamp  ),
+  .trig_timestamp_i   ( trig_timestamp  ),
 
   .bram_rd_dat_i      ( bram_rd_dat     ),
   .bram_ack_i         ( bram_ack        ),
@@ -589,6 +611,8 @@ rp_scope_cfg #(
   .set_axi_stop_o     ( set_axi_stop    ),
   .set_axi_dly_o      ( set_axi_dly     ),
   .set_axi_en_o       ( set_axi_en      ),
+  .cfg_timestamp_init_o   ( cfg_timestamp_init    ),
+  .cfg_timestamp_init_we_o( cfg_timestamp_init_we ),
   .irq_mask_o         ( irq_mask        ),
   .irq_clr_o          ( irq_clr         ),
   .split_irq_mask_o   ( split_irq_mask  ),

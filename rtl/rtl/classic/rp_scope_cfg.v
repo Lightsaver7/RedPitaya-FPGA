@@ -52,6 +52,8 @@ module rp_scope_cfg #(
 
    input      [   4*32 -1: 0] axi_wp_cur_i         ,
    input      [   4*32 -1: 0] axi_wp_trig_i        ,
+   input      [      64-1: 0] curr_timestamp_i     ,
+   input      [   4*64 -1: 0] trig_timestamp_i     ,
 
    input      [   4*DW -1: 0] bram_rd_dat_i        ,
    input      [       4-1: 0] bram_ack_i           ,
@@ -87,6 +89,8 @@ module rp_scope_cfg #(
    output     [   4*32 -1: 0] set_axi_stop_o       ,
    output     [   4*32 -1: 0] set_axi_dly_o        ,
    output     [       4-1: 0] set_axi_en_o         ,
+   output     [      64-1: 0] cfg_timestamp_init_o ,
+   output                     cfg_timestamp_init_we_o,
    output reg [       2-1: 0] irq_mask_o           ,
    output reg [       2-1: 0] irq_clr_o            ,
    output reg [       8-1: 0] split_irq_mask_o     ,
@@ -137,6 +141,9 @@ reg  [ 4*32-1: 0] set_axi_start ;
 reg  [ 4*32-1: 0] set_axi_stop  ;
 reg  [ 4*32-1: 0] set_axi_dly   ;
 reg  [    4-1: 0] set_axi_en    ;
+reg  [  64-1: 0] cfg_timestamp_init;
+reg  [  64-1: 0] cfg_timestamp_snapshot;
+reg               cfg_timestamp_init_we;
 
 wire              sys_en        ;
 
@@ -220,6 +227,13 @@ end
 
 end
 endgenerate
+
+always @(posedge adc_clk_i)
+if (adc_rstn_i == 1'b0) begin
+  cfg_timestamp_init_we <= 1'b0;
+end else begin
+  cfg_timestamp_init_we <= sys_wen && (sys_addr[19:0]==20'h224);
+end
 
 
 wire [    4-1: 0] adc_arm_do_x    ;
@@ -309,6 +323,7 @@ if (adc_rstn_i == 1'b0) begin
   set_axi_stop           <= {4{32'd0}}      ;
   set_axi_dly            <= {4{32'd0}}      ;
   set_axi_en             <=  4'h0           ;
+  cfg_timestamp_init     <= 64'h0           ;
   irq_mask_o             <=  2'b0           ;
   irq_clr_o              <=  2'b0           ;
   split_irq_mask_o       <=  8'h0           ;
@@ -361,6 +376,11 @@ end else begin
     if (sys_addr[19:0]==20'hB4 )   split_irq_mask_o           <= sys_wdata[ 8-1:0] ;
     if (sys_addr[19:0]==20'hB8 )   split_irq_clr_o            <= sys_wdata[ 8-1:0] ;
 
+    if (sys_addr[19:0]==20'h220)   cfg_timestamp_init[32-1:0]  <= sys_wdata[32-1:0] ;
+    if (sys_addr[19:0]==20'h224) begin
+      cfg_timestamp_init          <= {sys_wdata[32-1:0], cfg_timestamp_init[32-1:0]} ;
+    end
+
     if (sys_addr[19:0]==20'h110)   set_dly[32*2-1:32*1]       <= sys_wdata[32-1:0] ;
     if (sys_addr[19:0]==20'h114)   set_dec[17*2-1:17*1]       <= sys_wdata[17-1:0] ;    
 
@@ -389,6 +409,15 @@ end else begin
     //if (sys_addr[19:0]==20'h24C )   set_filt_pp[25*4-1:25*3]   <= sys_wdata[25-1:0] ;
 
    end
+
+end
+
+always @(posedge adc_clk_i)
+if (adc_rstn_i == 1'b0) begin
+  cfg_timestamp_snapshot <= 64'h0;
+end else begin
+  if (sys_ren && (sys_addr[19:0] == 20'h220))
+    cfg_timestamp_snapshot <= curr_timestamp_i;
 end
 
 
@@ -468,6 +497,16 @@ end else begin
     20'h00204 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*1-1:16*0]}    ; end
     20'h00208 : begin sys_ack <= sys_en;          sys_rdata <= {{32-DW{1'b0}},  set_calib_offset[DW*2-1:DW*1]}  ; end
     20'h0020C : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*2-1:16*1]}    ; end
+    20'h00220 : begin sys_ack <= sys_en;          sys_rdata <=                  curr_timestamp_i[31:0]           ; end
+    20'h00224 : begin sys_ack <= sys_en;          sys_rdata <=                  cfg_timestamp_snapshot[63:32]   ; end
+    20'h00228 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[31:0]          ; end
+    20'h0022C : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[63:32]         ; end
+    20'h00230 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[95:64]         ; end
+    20'h00234 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[127:96]        ; end
+    20'h00238 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[159:128]       ; end
+    20'h0023C : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[191:160]       ; end
+    20'h00240 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[223:192]       ; end
+    20'h00244 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[255:224]       ; end
     // removed because for 4ADC channels are mirrored on main address
     //20'h00210 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*3-1:16*2]}  ; end
     //20'h00214 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*3-1:16*2]}    ; end
@@ -519,6 +558,8 @@ assign set_axi_start_o       = set_axi_start   ;
 assign set_axi_stop_o        = set_axi_stop    ;
 assign set_axi_dly_o         = set_axi_dly     ;
 assign set_axi_en_o          = set_axi_en      ;
+assign cfg_timestamp_init_o  = cfg_timestamp_init;
+assign cfg_timestamp_init_we_o = cfg_timestamp_init_we;
 assign set_calib_offset_o    = set_calib_offset;
 assign set_calib_gain_o      = set_calib_gain  ;
 
