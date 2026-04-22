@@ -503,10 +503,10 @@ end else begin
     20'h0022C : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[63:32]         ; end
     20'h00230 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[95:64]         ; end
     20'h00234 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[127:96]        ; end
-    20'h00238 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[159:128]       ; end
-    20'h0023C : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[191:160]       ; end
-    20'h00240 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[223:192]       ; end
-    20'h00244 : begin sys_ack <= sys_en;          sys_rdata <=                  trig_timestamp_i[255:224]       ; end
+    20'h00238 : begin sys_ack <= sys_en;          sys_rdata <= (N_CH > 2) ?    trig_timestamp_i[159:128] : 32'h0 ; end
+    20'h0023C : begin sys_ack <= sys_en;          sys_rdata <= (N_CH > 2) ?    trig_timestamp_i[191:160] : 32'h0 ; end
+    20'h00240 : begin sys_ack <= sys_en;          sys_rdata <= (N_CH > 2) ?    trig_timestamp_i[223:192] : 32'h0 ; end
+    20'h00244 : begin sys_ack <= sys_en;          sys_rdata <= (N_CH > 2) ?    trig_timestamp_i[255:224] : 32'h0 ; end
     // removed because for 4ADC channels are mirrored on main address
     //20'h00210 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_offset[16*3-1:16*2]}  ; end
     //20'h00214 : begin sys_ack <= sys_en;          sys_rdata <= {{32-16{1'b0}},  set_calib_gain[16*3-1:16*2]}    ; end
