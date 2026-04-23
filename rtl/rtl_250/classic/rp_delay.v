@@ -30,7 +30,7 @@ module rp_delay #(
 
   input      [DW-1: 0] dly_dat_i       ,
   input                dly_val_i       ,
-  input      [ 4-1: 0] set_trg_src_i   ,
+  input      [ 5-1: 0] set_trg_src_i   ,
   input                set_trg_new_i   ,
 
   output               axidly_valp_o   ,
@@ -47,7 +47,7 @@ module rp_delay #(
 reg  [ DW-1: 0] adc_fifo [3:0]  ;
 reg  [ DW-1: 0] axi_fifo [3:0]  ;
 
-reg  [  4-1: 0] last_src        ;
+reg  [  5-1: 0] last_src        ;
 reg  [  4-1: 0] adc_dv_r        ;
 reg  [  4-1: 0] axi_dv_r        ;
 
@@ -72,7 +72,7 @@ end
 
 always @(posedge adc_clk_i) begin
   if (adc_rstn_i == 1'b0)
-    last_src <= 4'h0;
+    last_src <= 5'h0;
   else begin
     if (set_trg_new_i)
       last_src <= set_trg_src_i ;
@@ -87,6 +87,10 @@ always @(posedge adc_clk_i) begin //delay to trigger
     prev_dly <= 2'h0;
   end else begin
     case (last_src)
+      5'd18,
+      5'd20,
+      5'd26,
+      5'd28,
       4'd2,
       4'd3,
       4'd4,
@@ -95,6 +99,8 @@ always @(posedge adc_clk_i) begin //delay to trigger
       4'd11,
       4'd12,
       4'd13   : begin dat_dly <= 2'h1; prev_dly <= 2'h1; end // level trigger
+      5'd22,
+      5'd24,
       4'd6,
       4'd7,
       4'd8,

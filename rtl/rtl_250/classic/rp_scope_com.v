@@ -111,7 +111,7 @@ wire [       4-1: 0] adc_we_keep       ;
 wire [       4-1: 0] trig_dis_clr      ;
 wire [       4-1: 0] axi_en_pulse      ;
 wire [       4-1: 0] new_trg_src       ;
-wire [   4*4  -1: 0] trg_src           ;
+wire [   4*5  -1: 0] trg_src           ;
 wire [       4-1: 0] set_dec1          ;
 wire [       4-1: 0] filt_rstn         ;
 wire [   4*DW -1: 0] set_tresh         ;
@@ -323,7 +323,7 @@ rp_delay #(
    // Connection to AXI master
   .dly_dat_i     ( adc_dly_in                     ),
   .dly_val_i     ( dec_val                        ),
-  .set_trg_src_i ( trg_src[(GV+1)*4-1:GV*4]       ),
+  .set_trg_src_i ( trg_src[(GV+1)*5-1:GV*5]       ),
   .set_trg_new_i ( new_trg_src[GV]                ),
 
   .axidly_val_o  ( axi_dv_del                     ),
@@ -363,7 +363,7 @@ rp_trig_src #(
   .adc_dly_do_i   ( adc_dly_do       ),
   .trig_dis_clr_i ( trig_dis_clr[GV] ),
 
-  .set_trg_src_i  ( trg_src[(GV+1)*4-1:GV*4] ),
+  .set_trg_src_i  ( trg_src[(GV+1)*5-1:GV*5] ),
   .set_trg_new_i  ( new_trg_src[GV]          ),
   .dly_valp_i     ( adc_dv_del_p[GV]         ),
 
