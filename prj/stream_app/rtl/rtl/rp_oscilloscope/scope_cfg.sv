@@ -250,6 +250,7 @@ reg                         cfg_8bit_dat;
 reg  [32-1:0]               cfg_dma_ctrl;
 reg                         cfg_dma_ctrl_we;
 reg  [64-1:0]               cfg_timestamp_init;
+reg  [64-1:0]               cfg_timestamp_snapshot;
 reg                         cfg_timestamp_init_we;
 reg                         cfg_clksel;
 
@@ -559,7 +560,7 @@ begin
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_CTRL_ADDR    ))  cfg_dma_ctrl            <= reg_wdat_axi;
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_BUF_SIZE_ADDR))  cfg_dma_buf_size        <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==TIMESTAMP_INIT_LO))  cfg_timestamp_init[32-1:0]  <= reg_wdat_axi[32-1:0];
-      if (reg_write_axi && (reg_ofs_axi[12-1:0]==TIMESTAMP_INIT_HI))  cfg_timestamp_init[64-1:32] <= reg_wdat_axi[32-1:0];
+      if (reg_write_axi && (reg_ofs_axi[12-1:0]==TIMESTAMP_INIT_HI))  cfg_timestamp_init          <= {reg_wdat_axi[32-1:0], cfg_timestamp_init[32-1:0]};
 
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH1))  cfg_dma_dst_addr1[1*32-1:0*32] <= reg_wdat_axi[32-1:0];
       if (reg_write_axi && (reg_ofs_axi[12-1:0]==DMA_DST_ADDR1_CH2))  cfg_dma_dst_addr1[2*32-1:1*32] <= reg_wdat_axi[32-1:0];
@@ -574,6 +575,14 @@ begin
    end
 end
 
+always @(posedge clk_axi_i)
+begin
+   if (adc_rstn_i == 1'b0)
+      cfg_timestamp_snapshot <= 64'h0;
+   else if (reg_read_axi && (reg_ofs_axi[12-1:0]==TIMESTAMP_INIT_LO))
+      cfg_timestamp_snapshot <= curr_timestamp_i;
+end
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 // Read logic AXI regs
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -584,7 +593,7 @@ begin
       DMA_STS_ADDR           : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_sts_i;               end
       DMA_BUF_SIZE_ADDR      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_buf_size;            end
       TIMESTAMP_INIT_LO      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_timestamp_i[32-1:0];    end
-      TIMESTAMP_INIT_HI      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = curr_timestamp_i[64-1:32];   end
+      TIMESTAMP_INIT_HI      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_timestamp_snapshot[64-1:32];   end
 
       DMA_DST_ADDR1_CH1      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1[1*32-1:0*32]; end
       DMA_DST_ADDR1_CH2      : begin  reg_ack_axi = 1'b1; reg_rdat_axi = cfg_dma_dst_addr1[2*32-1:1*32]; end
