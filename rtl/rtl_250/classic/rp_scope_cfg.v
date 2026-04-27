@@ -66,7 +66,7 @@ module rp_scope_cfg #(
    output     [       4-1: 0] indep_mode_o         ,
    output     [       4-1: 0] axi_en_pulse_o       ,
    output     [       4-1: 0] new_trg_src_o        ,
-   output     [   4*4  -1: 0] trg_src_o            ,
+   output     [   4*5  -1: 0] trg_src_o            ,
    output     [       4-1: 0] set_dec1_o           ,
    output     [       4-1: 0] filt_rstn_o          ,
    output     [   4*DW -1: 0] set_tresh_o          ,
@@ -123,7 +123,7 @@ reg  [ 4*DW-1: 0] set_hyst      ;
 reg  [ 4*DW-1: 0] set_hyst_raw  ;
 reg  [    4-1: 0] set_avg_en    ;
 reg  [    4-1: 0] set_hres_en     ;
-wire [ 4*4 -1: 0] trg_src       ;
+wire [ 4*5 -1: 0] trg_src       ;
 
 
 reg  [ 4*18-1: 0] set_filt_aa   ;
@@ -187,10 +187,10 @@ assign sys_dats                 = ((CHN == 1) && (indep_mode[GV] == 1)) ? sys_wd
 //assign sys_dats                 = sys_wdata[(GV+1)*8-1:GV*8];
 
 assign axi_en_pulse[GV]         = sys_wen && axi_en_addr[GV] && sys_wdata[0];
-assign new_trg_src[GV]          = (sys_addr[19:0] == 20'h4) && sys_wen && |sys_dats[3:0];
+assign new_trg_src[GV]          = (sys_addr[19:0] == 20'h4) && sys_wen && |sys_dats[4:0];
 assign set_dec1[GV]             = (set_dec[(GV+1)*17-1:GV*17] == 17'h1);
 assign filt_rstn[GV]            = (adc_rstn_i == 1'b1) && filt_coef_wr;
-assign trg_src[(GV+1)*4-1:GV*4] = sys_dats[3:0];
+assign trg_src[(GV+1)*5-1:GV*5] = sys_dats[4:0];
 
 always @(posedge adc_clk_i)
 if (adc_rstn_i == 1'b0) begin
@@ -212,7 +212,7 @@ always @(posedge adc_clk_i) begin
   end else begin
     adc_arm_do[GV]   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_dats[0] ; // SW ARM
     adc_rst_do[GV]   <= sys_wen && (sys_addr[19:0]==20'h0 ) && sys_dats[1] ; // reset
-    adc_trig_sw[GV]  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_dats[3:0]==4'h1); // SW trigger
+    adc_trig_sw[GV]  <= sys_wen && (sys_addr[19:0]==20'h4 ) && (sys_dats[4:0]==5'h1); // SW trigger
     trig_dis_clr[GV] <= sys_wen && (sys_addr[19:0]==20'h94) && (sys_dats[0]==1'b1);   // clear trigger protect/disable
     if (sys_wen) begin
       if (sys_addr[19:0]==20'h0  && |sys_dats)  adc_we_keep[GV]  <= sys_dats[3]   ; // ARM stays on after trigger
@@ -240,7 +240,7 @@ wire [    4-1: 0] adc_trig_sw_x   ;
 wire [    4-1: 0] adc_we_keep_x   ;
 wire [    4-1: 0] trig_dis_clr_x  ;
 wire [    4-1: 0] new_trg_src_x   ;
-wire [ 4*4 -1: 0] trg_src_x       ;
+wire [ 4*5 -1: 0] trg_src_x       ;
 wire [ 4*32-1: 0] set_dly_x       ;
 wire [ 4*17-1: 0] set_dec_x       ;
 wire [    4-1: 0] set_dec1_x      ;
@@ -259,7 +259,7 @@ if (GL == 0) begin
   assign adc_we_keep_x[GL]            = adc_we_keep[GL]            ;
   assign trig_dis_clr_x[GL]           = trig_dis_clr[GL]           ;
   assign new_trg_src_x[GL]            = new_trg_src[GL]            ;
-  assign trg_src_x[(GL+1)*4 -1:GL*4 ] = trg_src[(GL+1)*4-1:GL*4] ;
+  assign trg_src_x[(GL+1)*5 -1:GL*5 ] = trg_src[(GL+1)*5-1:GL*5] ;
   assign set_dly_x[(GL+1)*32-1:GL*32] = set_dly[(GL+1)*32-1:GL*32] ;
   assign set_dec_x[(GL+1)*17-1:GL*17] = set_dec[(GL+1)*17-1:GL*17] ;
   assign set_dec1_x[GL]               = set_dec1[GL]               ;
@@ -272,7 +272,7 @@ end else begin
   assign adc_we_keep_x[GL]            = indep_mode[GL] ? adc_we_keep[GL]            : adc_we_keep[0]  ;
   assign trig_dis_clr_x[GL]           = indep_mode[GL] ? trig_dis_clr[GL]           : trig_dis_clr[0] ;
   assign new_trg_src_x[GL]            = indep_mode[GL] ? new_trg_src[GL]            : new_trg_src[0]  ;
-  assign trg_src_x[(GL+1)*4 -1:GL*4 ] = indep_mode[GL] ? trg_src[(GL+1)*4-1:GL*4]   : trg_src[3:0]    ;
+  assign trg_src_x[(GL+1)*5 -1:GL*5 ] = indep_mode[GL] ? trg_src[(GL+1)*5-1:GL*5]   : trg_src[4:0]    ;
   assign set_dly_x[(GL+1)*32-1:GL*32] = indep_mode[GL] ? set_dly[(GL+1)*32-1:GL*32] : set_dly[32-1: 0];
   assign set_dec_x[(GL+1)*17-1:GL*17] = indep_mode[GL] ? set_dec[(GL+1)*17-1:GL*17] : set_dec[17-1: 0];
   assign set_dec1_x[GL]               = indep_mode[GL] ? set_dec1[GL]               : set_dec1[0]     ;
