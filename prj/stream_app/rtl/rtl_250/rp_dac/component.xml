@@ -2233,19 +2233,19 @@
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/sync_rw_single.v</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/sync_rw_single.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/interface/axi4_if.sv</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/interface/axi4_if.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/axi4_slave.sv</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/axi4_slave.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/interface/sys_bus_if.sv</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/interface/sys_bus_if.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
@@ -2322,19 +2322,19 @@
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/sync_rw_single.v</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/sync_rw_single.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/interface/axi4_if.sv</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/interface/axi4_if.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/axi4_slave.sv</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/axi4_slave.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
-        <spirit:name>../../../../../../rtl/rtl/rtl/interface/sys_bus_if.sv</spirit:name>
+        <spirit:name>../../../../../rtl/rtl/interface/sys_bus_if.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
