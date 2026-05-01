@@ -90,6 +90,10 @@ endif
 ifeq ($(PRJ),stream_app)
     ifeq ($(FPGA_VERSION),z20_125_4ch)
         DTS_IP_PATH := dts_4ch
+    else ifeq ($(FPGA_VERSION),z20_250)
+        DTS_IP_PATH := dts_250
+    else ifeq ($(FPGA_VERSION),z20_250_1_0)
+        DTS_IP_PATH := dts_250
     endif
 endif
 

@@ -96,7 +96,18 @@ module red_pitaya_top_250 #(
   output logic                    adc_spi_clk, // ADC spi CLK
   output logic                    adc_sync_o, // ADC sync
 
+  // DAC
+  output logic [1:0][14-1:0] dac_dat_o,  // DAC data
+  input  logic               dac_dco_i,  // DAC clock
+  output logic               dac_reset_o,  // DAC reset
+  output logic               dac_spi_csb, // DAC spi CS
   inout  logic               dac_spi_sdio, // DAC spi DIO
+  output logic               dac_spi_clk, // DAC spi CLK
+  // PWM DAC
+  output logic [ 4-1:0] dac_pwm_o  ,  // 1-bit PWM DAC
+  // XADC
+  input  logic [ 5-1:0] vinp_i     ,  // voltages p
+  input  logic [ 5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
   inout  logic          exp_9_io   ,
   inout  logic [ 9-1:0] exp_p_io   ,
@@ -156,6 +167,7 @@ logic [2-1:0] [ 7-1:0] adc_dat_ibuf;
 logic [2-1:0] [ 7-1:0] adc_dat_idly;
 logic [2-1:0] [14-1:0] adc_dat_in;
 logic [2-1:0] [16-1:0] adc_dat_sw_r, adc_dat_sw;
+logic [16-1:0]          dac_dat_a, dac_dat_b;
 
 genvar GV;
 generate
@@ -345,6 +357,18 @@ IOBUF i_iobuf9          (.O(exp_9_in), .IO(exp_9_io), .I(exp_9_out), .T(~exp_9_d
 assign gpio.i[15: 8] = exp_p_in[7:0];
 assign gpio.i[23:16] = exp_n_in[7:0];
 
+////////////////////////////////////////////////////////////////////////////////
+// DAC IO
+////////////////////////////////////////////////////////////////////////////////
+
+assign dac_pwm_o = 4'h0;
+
+always_ff @(posedge clk_250) begin
+  dac_reset_o  <= ~rstn_hk;
+  dac_dat_o[0] <= {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
+  dac_dat_o[1] <= {dac_dat_a[16-1], ~dac_dat_a[16-2:2]};
+end
+
   system_wrapper system_wrapper_i
        (.DDR_addr(DDR_addr),
         .DDR_ba(DDR_ba),
@@ -422,7 +446,9 @@ assign gpio.i[23:16] = exp_n_in[7:0];
         .frstn_3(frstn[3]),
         .adc_clk(adc_clk_in),
         .adc_data_ch1(adc_dat_sw[0]),
-        .adc_data_ch2(adc_dat_sw[1]));
+        .adc_data_ch2(adc_dat_sw[1]),
+        .dac_dat_a(dac_dat_a),
+        .dac_dat_b(dac_dat_b));
 
 assign axi_gp.AWREGION = '0;
 assign axi_gp.ARREGION = '0;

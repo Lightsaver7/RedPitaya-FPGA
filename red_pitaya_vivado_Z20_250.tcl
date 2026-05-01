@@ -181,8 +181,10 @@ if {$dev_mode == 1} {return}
 launch_runs synth_1
 wait_on_run synth_1
 
-set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
-file copy -force $rptFiles ./$path_out/
+set rptFiles [glob -nocomplain -directory ./$prj_dir/redpitaya.runs/synth_1/  *.rpt]
+foreach file $rptFiles {
+   file copy -force $file ./$path_out/
+}
 
 ################################################################################
 # run placement and logic optimization
@@ -193,7 +195,7 @@ file copy -force $rptFiles ./$path_out/
 launch_runs impl_1
 wait_on_run impl_1
 
-set rptFiles [glob -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]
+set rptFiles [glob -nocomplain -directory ./$prj_dir/redpitaya.runs/impl_1/  *.rpt]
 foreach file $rptFiles {
    file copy -force $file ./$path_out/
 }
