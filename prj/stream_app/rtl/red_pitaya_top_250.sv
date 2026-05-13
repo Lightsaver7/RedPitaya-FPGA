@@ -365,8 +365,8 @@ assign dac_pwm_o = 4'h0;
 
 always_ff @(posedge clk_250) begin
   dac_reset_o  <= ~rstn_hk;
-  dac_dat_o[0] <= {dac_dat_b[16-1], ~dac_dat_b[16-2:2]};
-  dac_dat_o[1] <= {dac_dat_a[16-1], ~dac_dat_a[16-2:2]};
+  dac_dat_o[0] <= dac_dat_b[16-1:2];
+  dac_dat_o[1] <= dac_dat_a[16-1:2];
 end
 
   system_wrapper system_wrapper_i
