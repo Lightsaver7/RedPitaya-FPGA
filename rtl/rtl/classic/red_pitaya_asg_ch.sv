@@ -118,7 +118,6 @@ reg   [ RSZ-1: 0] dac_rp    ;
 reg   [PNT_SIZE-1: 0] dac_pnt   ; // read pointer
 reg   [PNT_SIZE-1: 0] dac_pntp  ; // previous read pointer
 wire  [PNT_SIZE-1: 0] axi_pnt   ; // read pointer AXI
-reg   [PNT_SIZE-1: 0] axi_pntp  ; // previous read pointer AXI
 wire  [PNT_SIZE  : 0] dac_npnt  ; // next read pointer
 wire  [PNT_SIZE  : 0] dac_npnt_sub ;
 wire                  dac_npnt_sub_neg;
@@ -320,7 +319,6 @@ always @(posedge dac_clk_i) begin
 
       // count number of table read cycles
       dac_pntp  <= dac_pnt;
-      axi_pntp  <= axi_pnt;
       dac_trigr <= dac_trig; // ignore trigger when count
 
       if (dac_trig)

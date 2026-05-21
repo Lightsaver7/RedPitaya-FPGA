@@ -69,7 +69,6 @@ reg  [ DW-1: 0] adc_dat     ;
 reg  [ 32-1: 0] adc_sum     ;
 reg  [ 32-1: 0] sum_in      ;
 reg  [ 32-1: 0] sum_uns     ;
-reg  [ 32-1: 0] div_uns     ;
 reg  [ 17-1: 0] adc_dec_cnt ;
 reg             adc_dv      ;
 reg             div_go      ;
@@ -117,7 +116,6 @@ if (adc_rstn_i == 1'b0) begin
    dat_got     <= 1'b0;
    adc_dv_div  <= 1'b0;
    div_dat_got <= 1'b0;
-   div_uns   <= 32'h0;
    sum_uns   <= 32'h0;
    sum_in    <= 32'h0;
    dat_div   <= 32'h0;
@@ -143,7 +141,6 @@ end else begin
 
    if (div_ok) begin // division finished
       div_dat_got <= 1'b1;    
-      div_uns   <= div_out; //get unsigned output data  
    end else
       div_dat_got <= 1'b0;
    
