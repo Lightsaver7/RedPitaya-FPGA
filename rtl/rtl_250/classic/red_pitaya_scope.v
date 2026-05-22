@@ -113,8 +113,6 @@ reg  [ 32-1: 0] a_sum_in      ;
 reg  [ 32-1: 0] b_sum_in      ;
 reg  [ 32-1: 0] a_sum_uns     ;
 reg  [ 32-1: 0] b_sum_uns     ;
-reg  [ 32-1: 0] a_div_uns     ;
-reg  [ 32-1: 0] b_div_uns     ;
 reg  [ 17-1: 0] set_dec       ;
 reg  [ 17-1: 0] adc_dec_cnt   ;
 reg             set_avg_en    ;
@@ -187,8 +185,6 @@ if (adc_rstn_i == 1'b0) begin
    adc_dv_div  <= 1'b0;
    dat_got     <= 1'b0;
    div_dat_got <= 1'b0;
-   a_div_uns   <= 32'h0;
-   b_div_uns   <= 32'h0;
    a_sum_uns   <= 32'h0;
    b_sum_uns   <= 32'h0;
    a_sum_in    <= 32'h0;
@@ -227,8 +223,6 @@ end else begin
 
    if (div_ok_a || div_ok_b) begin // division finished
       div_dat_got <= 1'b1;    
-      a_div_uns   <= div_out_a; //get unsigned output data  
-      b_div_uns   <= div_out_b;   
    end else
       div_dat_got <= 1'b0;
    

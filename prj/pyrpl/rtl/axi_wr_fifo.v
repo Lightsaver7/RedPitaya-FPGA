@@ -242,14 +242,6 @@ begin
 end
 
 
-wire [4-1: 0] aaaa = 4'hF - next_address[6:3];
-wire [4-1: 0] bbbb = sys_stop_addr_r[6:3] - next_address[6:3];
-wire [4-1: 0] cccc = fill_lvl[3:0] - 4'h1;
-wire [4-1: 0] dddd = fill_lvl[3:0];
-
-
-
-
 assign pop =  (!data_in_reg && fill_lvl) || ((|dat_cnt || (new_burst && axi_wvalid_o)) 
             && axi_wrdy_i && axi_wvalid_o && fill_lvl) ;
 
