@@ -39,6 +39,8 @@ C:\Xilinx\Vivado\2025.1\bin\vivado.bat
 
 ## Open a project in Vivado
 
+### On Windows (cmd.exe)
+
 From `cmd.exe` in the repository root:
 
 ```bat
@@ -52,16 +54,38 @@ open_vivado.bat v0.94 Z20
 open_vivado.bat stream_app Z20_250
 ```
 
-The script:
-
+**What the script does:**
 - checks that `prj\<PROJECT>` exists
 - validates `MODEL`
-- runs `red_pitaya_vivado_<MODEL>.tcl` in `DEV_MODE`
+- locates `vivado.bat` (via `XILINX_VIVADO` or fallback path)
+- checks that `red_pitaya_vivado_<MODEL>.tcl` exists
+- runs Vivado directly with `-source red_pitaya_vivado_<MODEL>.tcl -tclargs <PROJECT> DEV_MODE`
 
 Help:
 
 ```bat
 open_vivado.bat --help
+```
+
+### On Linux / Unix-like shell (Git Bash, MSYS2, WSL)
+
+From a Unix-like shell in the repository root:
+
+```bash
+./open_vivado.sh v0.94 Z20_250
+```
+
+**What the script does:**
+- checks that `prj/<PROJECT>` exists
+- validates `MODEL`
+- calls `make project PRJ=<PROJECT> MODEL=<MODEL>`
+
+> **Note:** Unlike the Windows `.bat` script, `open_vivado.sh` does **not** locate Vivado directly or check for the Tcl script. It relies on the `Makefile` to handle the Vivado invocation. Ensure that `make` is available and that the `Makefile` has a `project` target.
+
+Help:
+
+```bash
+./open_vivado.sh --help
 ```
 
 ## Build from a shell on Windows
@@ -109,10 +133,16 @@ make project PRJ=stream_app MODEL=Z20_250 DEFINES="FEATURE_X=1"
 
 ## Common issues
 
-`Vivado was not found`
+`Vivado was not found` (when using `open_vivado.bat`)
 
 - set `XILINX_VIVADO`
 - check that `vivado.bat` exists in `%XILINX_VIVADO%\bin`
+
+`make: *** No rule to make target 'project'` (when using `open_vivado.sh` or `make` directly)
+
+- ensure you are running from a Unix-like shell (`Git Bash`, `MSYS2`, `WSL`)
+- check that the `Makefile` exists in the repository root
+- verify that `make` is installed and available in `PATH`
 
 `project "prj\<name>" not found`
 
