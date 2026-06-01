@@ -552,7 +552,8 @@ rp_scope_com #(
   .CHN(0),
   .N_CH(2),
   .DW(16),
-  .RSZ(14)) 
+  .ADC_DW(16),
+  .RSZ(14))
   i_scope (
   // ADC
   .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),

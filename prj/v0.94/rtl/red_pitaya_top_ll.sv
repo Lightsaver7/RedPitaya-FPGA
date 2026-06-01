@@ -681,6 +681,7 @@ rp_scope_com #(
   .CHN      (0),
   .N_CH     (2),
   .DW       (16),
+  .ADC_DW   (16),
   .RSZ      (14))
   i_scope (
   // ADC

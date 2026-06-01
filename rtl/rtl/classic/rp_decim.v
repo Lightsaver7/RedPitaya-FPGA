@@ -19,7 +19,8 @@ This module decimates the raw ADC data.
 This data can either be decimated with averaging or not. 
 */
 module rp_decim #(
-  parameter DW   = 14  // Legacy default; current classic hires implementation expects DW=16.
+  parameter DW     = 14,  // output/register data width
+  parameter ADC_DW = 14   // native ADC data width before high-resolution scaling
 )(
    input                adc_clk_i       ,  // ADC clock
    input                adc_rstn_i      ,  // ADC reset - active low
@@ -34,11 +35,12 @@ module rp_decim #(
    output     [DW-1: 0] dec_dat_o          // decimated data
 );
 
-localparam integer HRES_SHL = 2;
-localparam signed [31:0] BASE_MAX = 32'sd8191;
-localparam signed [31:0] BASE_MIN = -32'sd8192;
-localparam signed [31:0] HRES_MAX = 32'sd32767;
-localparam signed [31:0] HRES_MIN = -32'sd32768;
+localparam integer ADC_DATA_W = (ADC_DW < DW) ? ADC_DW : DW;
+localparam integer HRES_SHL = DW - ADC_DATA_W;
+localparam signed [31:0] BASE_MAX = (32'sd1 <<< (ADC_DATA_W-1)) - 32'sd1;
+localparam signed [31:0] BASE_MIN = -(32'sd1 <<< (ADC_DATA_W-1));
+localparam signed [31:0] HRES_MAX = (32'sd1 <<< (DW-1)) - 32'sd1;
+localparam signed [31:0] HRES_MIN = -(32'sd1 <<< (DW-1));
 
 function [DW-1:0] clamp_dec_out;
    input signed [31:0] dat_i;
