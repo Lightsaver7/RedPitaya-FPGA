@@ -57,6 +57,7 @@ module rp_scope_com #(
   parameter CHN  = 0 ,
   parameter N_CH = 2 ,
   parameter DW   = 14,
+  parameter ADC_DW = 14,
   parameter RSZ  = 14  // RAM size 2^RSZ
 )(
    // ADC
@@ -310,7 +311,8 @@ osc_filter #(
 assign adc_dec_in = set_filt_byp[GV] ? adc_filt_in : adc_filtered;
 
 rp_decim #(
-  .DW      (  DW          )
+  .DW      (  DW          ),
+  .ADC_DW  (  ADC_DW      )
 ) i_dec (
    // global signals
   .adc_clk_i    ( adc_clk_i[GV]  ),  // ADC clock
@@ -541,8 +543,11 @@ rp_ext_trig #(
 );
 
 rp_scope_cfg #(
-  .CHN (  CHN    ),
-  .DW  (  DW     )
+  .CHN        (CHN       ),
+  .N_CH       (N_CH      ),
+  .DW         (DW        ),
+  .ADC_DW     (ADC_DW    ),
+  .RSZ        (RSZ       )
 ) i_cfg (
    // global signals
   .adc_clk_i          ( adc_clk_i[0]    ),  // ADC clock
