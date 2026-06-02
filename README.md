@@ -1,158 +1,76 @@
-# Windows build
+# redpitaya-fpga
 
-This repository can be used on Windows to open Vivado projects and run builds.
+This repository contains FPGA projects for the Red Pitaya platform, along with shared sources, constraints, build scripts, and supporting materials.
 
-## Required software
+## Getting Started
 
-- Xilinx Vivado for Windows
-- `make`
-- `gcc`
-- `dtc`
-- `xsct`
-- a Unix-like shell such as `Git Bash`, `MSYS2`, or `WSL`
-
-This is required because the `Makefile` uses Unix shell utilities and will not run correctly from plain `cmd.exe` alone.
-
-## Vivado setup
-
-It is recommended to set the following environment variable:
-
-```bat
-set XILINX_VIVADO=C:\Xilinx\Vivado\2025.1
-```
-
-The [open_vivado.bat](/home/yura/projects/a014-redpitaya/redpitaya-fpga/open_vivado.bat:1) script first looks for `vivado.bat` at `%XILINX_VIVADO%\bin\vivado.bat`, then falls back to:
-
-```text
-C:\Xilinx\Vivado\2025.1\bin\vivado.bat
-```
-
-## Supported models
-
-- `Z10`
-- `Z20`
-- `Z20_14`
-- `Z20_4`
-- `Z20_250`
-- `Z20_G2`
-- `Z20_ll`
-
-## Open a project in Vivado
-
-### On Windows (cmd.exe)
-
-From `cmd.exe` in the repository root:
-
-```bat
-open_vivado.bat v0.94 Z20_250
-```
+- Use Vivado `2025.1`.
+- Choose a project from `prj/` and the required `MODEL`; the `MODEL` value must match a `red_pitaya_vivado_<MODEL>.tcl` file.
+- Use `open_vivado.bat` or `open_vivado.sh` to open a project quickly.
+- Use the root `Makefile` with `PRJ` and `MODEL` for the standard build flow.
 
 Examples:
 
-```bat
-open_vivado.bat v0.94 Z20
-open_vivado.bat stream_app Z20_250
-```
-
-**What the script does:**
-- checks that `prj\<PROJECT>` exists
-- validates `MODEL`
-- locates `vivado.bat` (via `XILINX_VIVADO` or fallback path)
-- checks that `red_pitaya_vivado_<MODEL>.tcl` exists
-- runs Vivado directly with `-source red_pitaya_vivado_<MODEL>.tcl -tclargs <PROJECT> DEV_MODE`
-
-Help:
-
-```bat
-open_vivado.bat --help
-```
-
-### On Linux / Unix-like shell (Git Bash, MSYS2, WSL)
-
-From a Unix-like shell in the repository root:
-
 ```bash
-./open_vivado.sh v0.94 Z20_250
+./open_vivado.sh v0.94 Z10
 ```
-
-**What the script does:**
-- checks that `prj/<PROJECT>` exists
-- validates `MODEL`
-- calls `make project PRJ=<PROJECT> MODEL=<MODEL>`
-
-> **Note:** Unlike the Windows `.bat` script, `open_vivado.sh` does **not** locate Vivado directly or check for the Tcl script. It relies on the `Makefile` to handle the Vivado invocation. Ensure that `make` is available and that the `Makefile` has a `project` target.
-
-Help:
-
-```bash
-./open_vivado.sh --help
-```
-
-## Build from a shell on Windows
-
-If you use `Git Bash`, `MSYS2`, or `WSL`, you can run the `Makefile` directly.
-
-Open the project in the GUI:
-
-```bash
-make project PRJ=v0.94 MODEL=Z20_250
-```
-
-Build the bitstream:
-
-```bash
-make PRJ=v0.94 MODEL=Z20_250
-```
-
-Build only the device tree:
-
-```bash
-make dts PRJ=v0.94 MODEL=Z20_250
-```
-
-Clean project artifacts:
 
 ```bash
 make clean PRJ=v0.94
+make PRJ=v0.94 MODEL=Z10
 ```
 
-## Useful Make variables
+Build guides:
 
-- `PRJ` - project name from the `prj/` directory
-- `MODEL` - target board model
-- `HWID` - optional hardware ID
-- `DEFINES` - additional Verilog defines
-- `DTS_VER` - device-tree flow version, default is `2025.1`
-- `VIVADO_OPTS` - additional Vivado arguments
+- Windows: [BUILD_WIN.md](/home/yura/projects/a014-redpitaya/redpitaya-fpga/BUILD_WIN.md:1)
+- Linux: [BUILD_LNX.md](/home/yura/projects/a014-redpitaya/redpitaya-fpga/BUILD_LNX.md:1)
 
-Example:
+## Repository structure
 
-```bash
-make project PRJ=stream_app MODEL=Z20_250 DEFINES="FEATURE_X=1"
-```
+- `prj/` - project directory; each subdirectory defines a separate build configuration and its own project-specific overrides.
+- `rtl/` - shared RTL modules.
+- `ip/` - IP blocks and related sources.
+- `sdc/` - constraint files for target boards.
+- `dts/` - device-tree-related files.
+- `tbn/` - test environment and testbenches.
+- `doc/` - documentation.
 
-## Common issues
+### How projects are organized in `prj/`
 
-`Vivado was not found` (when using `open_vivado.bat`)
+Projects in this repository are selected with `PRJ=<name>`. The `PRJ` value must match a directory name inside `prj/`, for example `v0.94`, `stream_app`, `logic`, or `barebones`.
 
-- set `XILINX_VIVADO`
-- check that `vivado.bat` exists in `%XILINX_VIVADO%\bin`
+The `MODEL` parameter selects the hardware build variant. It determines which `red_pitaya_vivado_<MODEL>.tcl` script is used for project opening and synthesis.
 
-`make: *** No rule to make target 'project'` (when using `open_vivado.sh` or `make` directly)
+For synthesis and project opening, Vivado combines shared RTL, constraints, and shared IP helper sources from the repository root with project-local files from `prj/<PRJ>/`.
 
-- ensure you are running from a Unix-like shell (`Git Bash`, `MSYS2`, `WSL`)
-- check that the `Makefile` exists in the repository root
-- verify that `make` is installed and available in `PATH`
+Typical project subdirectories are:
 
-`project "prj\<name>" not found`
+- `prj/<PRJ>/rtl` - project RTL modules.
+- `prj/<PRJ>/ip` - block-design Tcl descriptions and IP/PS configuration for that project.
+- `prj/<PRJ>/sdc` - project-specific constraints layered on top of the shared ones.
+- `prj/<PRJ>/dts` and variants such as `dts_250`, `dts_4ch` - project device-tree data.
+- `prj/<PRJ>/tbn` - project testbenches.
+- `prj/<PRJ>/out`, `build`, `sdk`, `.Xil`, `sim` - common generated directories for project artifacts.
 
-- check the project directory name in `prj/`
+Reusable blocks are kept in the root `rtl/`, `ip/`, and `sdc/` directories and are connected from multiple projects.
 
-`invalid model`
+## Working with projects
 
-- use only the supported models listed above
+In this codebase, a project is represented by a `prj/<PRJ>` directory.
 
-`make`, `gcc`, `dtc`, or shell utility errors
+When creating a new project:
 
-- run the build from `Git Bash`, `MSYS2`, or `WSL`
-- make sure `make`, `gcc`, `dtc`, and `xsct` are available in `PATH`
+- create a new directory under `prj/`; its name becomes the `PRJ` value;
+- use `prj/barebones` as the starting point for a new project;
+- keep project-local sources and configuration files inside the project directory;
+- `rtl/`, `ip/`, and `dts/` are usually required;
+- add `sdc/` when the project needs its own constraints;
+- add `tbn/` when the project needs its own tests.
+
+The `prj/<PRJ>/ip` directory is usually created either by exporting Tcl from Vivado for an already configured project or by copying a template such as `prj/barebones/ip` and adapting it for the new project.
+
+When modifying an existing project:
+
+- keep project-specific changes in `prj/<PRJ>/rtl`, `prj/<PRJ>/ip`, `prj/<PRJ>/sdc`, `prj/<PRJ>/dts`, and related project files;
+- treat shared modules carefully, because the same code may be used by multiple projects and board variants;
+- reopen or rebuild the project with the same `PRJ` and `MODEL` to validate the changes.
