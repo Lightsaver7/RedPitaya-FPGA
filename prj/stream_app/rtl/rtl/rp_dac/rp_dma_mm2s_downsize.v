@@ -35,7 +35,7 @@ assign step_sh_next_next = {16'h0,dac_pntr_step} << {!set_8bit_i, set_8bit_i}; /
 
 reg [8-1:0] samp_buf [0:NUM_SAMPS-1]; 
 
-wire bit8_rd  = dac_rp_next_next[NUM_SAMPS_BITS+1+16] ^ dac_rp_next[NUM_SAMPS_BITS+1+16];
+wire bit8_rd  = dac_rp_next_next[NUM_SAMPS_BITS+16] ^ dac_rp_next[NUM_SAMPS_BITS+16];
 wire bit16_rd = dac_rp_next_next[NUM_SAMPS_BITS+0+16] ^ dac_rp_next[NUM_SAMPS_BITS+0+16];
 wire rp_rd_en = set_8bit_i ? bit8_rd : bit16_rd;
 reg  rp_rd_en_r;
@@ -171,7 +171,7 @@ reg  [3-1 :0] rp_16bit_lo;
 
 always @(posedge clk)
 begin
-  rp_8bit     <=  dac_rp_curr[NUM_SAMPS_BITS+16:17];
+  rp_8bit     <=  dac_rp_curr[NUM_SAMPS_BITS+15:16];
   rp_16bit_hi <= {dac_rp_curr[NUM_SAMPS_BITS+15:17],1'b1};
   rp_16bit_lo <= {dac_rp_curr[NUM_SAMPS_BITS+15:17],1'b0};
 end
