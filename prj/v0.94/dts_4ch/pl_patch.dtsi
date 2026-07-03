@@ -1,0 +1,95 @@
+/*
+ * Zynq XADC configuration
+*/
+
+&xadc {
+        compatible = "xlnx,axi-xadc-1.00.a";
+        clocks = <&clkc 18>;
+        xlnx,channels {
+                #address-cells = <1>;
+                #size-cells = <0>;
+                channel@0 {
+                        reg = <0>;
+                };
+                channel@1 {
+                        reg = <1>;
+                };
+                channel@2 {
+                        reg = <2>;
+                };
+                channel@9 {
+                        reg = <9>;
+                };
+                channel@10 {
+                        reg = <10>;
+                };
+        };
+};
+
+&amba {
+        osc@05000000 {
+                compatible = "generic-uio";
+                reg = <0x05000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 31 4>;
+                status = "okay";
+        };
+
+        osc_ch1: osc_ch1@01000000 {
+                compatible = "generic-uio";
+                reg = <0x01000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 32 4>;
+                status = "okay";
+        };
+
+        osc_ch2: osc_ch2@02000000 {
+                compatible = "generic-uio";
+                reg = <0x02000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 33 4>;
+                status = "okay";
+        };
+
+        osc_ch3: osc_ch3@03000000 {
+                compatible = "generic-uio";
+                reg = <0x03000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 34 4>;
+                status = "okay";
+        };
+
+        osc_ch4: osc_ch4@04000000 {
+                compatible = "generic-uio";
+                reg = <0x04000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 35 4>;
+                status = "okay";
+        };
+};
+
+/ {
+         fragment@9 {
+                target = <&can0>;
+                overlay9: __overlay__ {
+                        status = "okay";
+                };
+        };
+
+        fragment@10 {
+                target = <&can1>;
+                overlay10: __overlay__ {
+                        status = "okay";
+                };
+        };
+};

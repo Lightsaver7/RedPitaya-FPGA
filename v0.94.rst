@@ -461,15 +461,15 @@ Oscilloscope
 +----------+----------------------------------------------------+------+-----+
 |          | CH1                                                |      |     |
 +----------+----------------------------------------------------+------+-----+
-|          |  Reserved                                          | 15:12|   R |
+|          |  Reserved                                          | 15:13|   R |
 +----------+----------------------------------------------------+------+-----+
-|          | Trigger source                                     | 11:8 | R/W |
+|          | Trigger source                                     | 12:8 | R/W |
 +----------+----------------------------------------------------+------+-----+
 |          | CH0                                                |      |     |
 +----------+----------------------------------------------------+------+-----+
-|          |  Reserved                                          |   7:4|   R |
+|          |  Reserved                                          |   7:5|   R |
 +----------+----------------------------------------------------+------+-----+
-|          | | Trigger source                                   |  3:0 | R/W |
+|          | | Trigger source                                   |  4:0 | R/W |
 |          | | 1 - trig immediately                             |      |     |
 |          | | 2 - ch A threshold positive edge                 |      |     |
 |          | | 3 - ch A threshold negative edge                 |      |     |
@@ -485,6 +485,12 @@ Oscilloscope
 |          | | 11- ch C threshold negative edge                 |      |     |
 |          | | 12- ch D threshold positive edge                 |      |     |
 |          | | 13- ch D threshold negative edge                 |      |     |
+|          | | 18- ch A threshold any edge                      |      |     |
+|          | | 20- ch B threshold any edge                      |      |     |
+|          | | 22- external trigger any edge                    |      |     |
+|          | | 24- arbitrary wave generator application any edge|      |     |
+|          | | 26- ch C threshold any edge                      |      |     |
+|          | | 28- ch D threshold any edge                      |      |     |
 +----------+----------------------------------------------------+------+-----+
 | **0x8**  | **Ch A threshold**                                 |      |     |
 +----------+----------------------------------------------------+------+-----+
@@ -1081,9 +1087,9 @@ Arbitrary Signal Generator (ASG)
         |          |  Selects trigger source for data capture. When     |      |     |
         |          |  trigger delay is ended value goes to 0.           |      |     |
         +----------+----------------------------------------------------+------+-----+
-        |          |  Reserved                                          |  31:4|   R |
+        |          |  Reserved                                          |  31:5|   R |
         +----------+----------------------------------------------------+------+-----+
-        |          | | Trigger source                                   |  3:0 | R/W |
+        |          | | Trigger source                                   |  4:0 | R/W |
         |          | | 1 - trig immediately                             |      |     |
         |          | | 2 - ch A threshold positive edge                 |      |     |
         |          | | 3 - ch A threshold negative edge                 |      |     |
@@ -1099,6 +1105,12 @@ Arbitrary Signal Generator (ASG)
         |          | | 11- ch C threshold negative edge                 |      |     |
         |          | | 12- ch D threshold positive edge                 |      |     |
         |          | | 13- ch D threshold negative edge                 |      |     |
+        |          | | 18- ch A threshold any edge                      |      |     |
+        |          | | 20- ch B threshold any edge                      |      |     |
+        |          | | 22- external trigger any edge                    |      |     |
+        |          | | 24- arbitrary wave generator application any edge|      |     |
+        |          | | 26- ch C threshold any edge                      |      |     |
+        |          | | 28- ch D threshold any edge                      |      |     |
         +----------+----------------------------------------------------+------+-----+
         | **0x8**  | **Ch C threshold**                                 |      |     |
         +----------+----------------------------------------------------+------+-----+

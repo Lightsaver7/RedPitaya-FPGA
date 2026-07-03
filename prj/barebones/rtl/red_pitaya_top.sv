@@ -36,7 +36,7 @@ module red_pitaya_top #()
   inout  logic          DDR_we_n
 );
 
-system system_i 
+system system_i
 (
   // MIO
   .FIXED_IO_mio      (FIXED_IO_mio     ),

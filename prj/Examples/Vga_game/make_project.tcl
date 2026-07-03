@@ -15,23 +15,6 @@
 #   run results please launch the synthesis/implementation runs as needed.
 #
 #*****************************************************************************************
-# NOTE: In order to use this script for source control purposes, please make sure that the
-#       following files are added to the source control system:-
-#
-# 1. This project restoration tcl script (make_project.tcl) that was generated.
-#
-# 2. The following source(s) files that were local or imported into the original project.
-#    (Please see the '$orig_proj_dir' and '$origin_dir' variable setting below at the start of the script)
-#
-#    "C:/Users/y.morgunov/workspace/A014-RedPitaya/RedPitaya/fpga/prj/Examples/Vga_game/Vga_game/Vga_game.srcs/sources_1/bd/design_1/hdl/design_1_wrapper.v"
-#
-# 3. The following remote source files that were added to the original project:-
-#
-#    "C:/Users/y.morgunov/workspace/A014-RedPitaya/RedPitaya/fpga/prj/Examples/Vga_game/rtl/vga_vhdl.vhd"
-#    "C:/Users/y.morgunov/workspace/A014-RedPitaya/RedPitaya/fpga/prj/Examples/Vga_game/sdc/pinout.xdc"
-#    "C:/Users/y.morgunov/workspace/A014-RedPitaya/RedPitaya/fpga/prj/Examples/Vga_game/tb/vga_tb.v"
-#
-#*****************************************************************************************
 
 # Set the reference directory for source file relative paths (by default the value is script directory path)
 set origin_dir "."
@@ -388,7 +371,7 @@ set_property -name "name" -value "utils_1" -objects $obj
 
 # Adding sources referenced in BDs, if not already added
 if { [get_files vga_vhdl.vhd] == "" } {
-  import_files -quiet -fileset sources_1 C:/Users/y.morgunov/workspace/A014-RedPitaya/RedPitaya/fpga/prj/Examples/Vga_game/rtl/vga_vhdl.vhd
+  import_files -quiet -fileset sources_1 ${origin_dir}/rtl/vga_vhdl.vhd
 }
 
 
@@ -777,7 +760,6 @@ set_property EXCLUDE_DEBUG_LOGIC "0" [get_files design_1.bd ]
 set_property GENERATE_SYNTH_CHECKPOINT "1" [get_files design_1.bd ] 
 set_property IS_ENABLED "1" [get_files design_1.bd ] 
 set_property IS_GLOBAL_INCLUDE "0" [get_files design_1.bd ] 
-set_property IS_LOCKED "0" [get_files design_1.bd ] 
 set_property LIBRARY "xil_defaultlib" [get_files design_1.bd ] 
 set_property PATH_MODE "RelativeFirst" [get_files design_1.bd ] 
 set_property PFM_NAME "" [get_files design_1.bd ] 

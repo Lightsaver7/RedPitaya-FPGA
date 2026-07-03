@@ -26,6 +26,42 @@
         };
 };
 
+&amba {
+        osc: osc@05000000 {
+                compatible = "generic-uio";
+                /*
+                 * Keep the legacy aggregate IRQ UIO separate from the
+                 * per-channel UIO devices and from api@40000000.
+                 */
+                reg = <0x05000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 31 4>;
+                status = "okay";
+        };
+
+        osc_ch1: osc_ch1@01000000 {
+                compatible = "generic-uio";
+                reg = <0x01000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 32 4>;
+                status = "okay";
+        };
+
+        osc_ch2: osc_ch2@02000000 {
+                compatible = "generic-uio";
+                reg = <0x02000000 0x00080000>;
+                reg-names = "buffer";
+                interrupt-names = "intr";
+                interrupt-parent = <&intc>;
+                interrupts = <0 33 4>;
+                status = "okay";
+        };
+};
+
 / {
          fragment@9 {
                 target = <&can0>;
@@ -41,5 +77,3 @@
                 };
         };
 };
-
-

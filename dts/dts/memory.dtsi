@@ -1,0 +1,28 @@
+/*
+ * define memory for DMA pool
+ */
+
+/ {
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x1000000>;
+			alignment = <0x2000>;
+			linux,cma-default;
+		};
+
+		rprx_reserverd: labuf@2000000 {
+			/*compatible = "redpitaya,rprx-memory";*/
+			reg = <0x2000000 0x2000000>;
+		};
+
+		dma_region: buffer@2000000_b {
+			reg = <0x2000000 0x2000000>;
+		};
+
+	};
+};

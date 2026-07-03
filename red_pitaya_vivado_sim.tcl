@@ -21,8 +21,8 @@ cd prj/$prj_name
 set path_brd ../../brd
 set path_rtl rtl
 set path_ip      ip
-set path_ip_top  ../../ip
-set path_bd  sim/redpitaya.srcs/sources_1/bd/system/hdl
+set path_ip_top  ../../ip/ip
+set path_bd  sim/redpitaya.gen/sources_1/bd/system/hdl
 set path_sdc ../../sdc
 set path_tbn tbn
 set path_tbn_top ../../tbn
@@ -125,23 +125,6 @@ set_property verilog_define $defines [get_filesets sim_1]
 
 set binfiles $path_tbn_top/dac_src_ch1.bin\ $path_tbn_top/adc_src_ch2.bin\ $path_tbn_top/adc_src_ch3.bin\ $path_tbn_top/adc_src_ch0.bin\ $path_tbn_top/dac_src_ch0.bin\ $path_tbn_top/adc_src_ch1.bin\ $path_tbn_top/gpio_src_out.bin
 
-set ip_files [glob  -nocomplain $path_ip/**/*.xci]
-if {$ip_files != ""} {
-add_files                         $ip_files
-}
-
-if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
-add_files $path_ip_top/asg_dat_fifo/asg_dat_fifo.xci
-}
-
-if {[file isdirectory $path_ip_top/sync_fifo]} {
-add_files $path_ip_top/sync_fifo/sync_fifo.xci
-}
-
-if {[file isdirectory $path_tbn_top/axi_prot_check]} {
-add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
-}
-
 if {($def_name == "STREAMING")} {
     switch $def_model {
     "Z20" {
@@ -214,17 +197,31 @@ generate_target all [get_files    system.bd]
 # 3. constraints
 ################################################################################
 
-add_files                         ../../$path_rtl
+add_files                         ../../rtl/$path_rtl
 add_files                         $path_rtl
-# sim adc 4 test  
-if {$def_model == "Z20_4"} {
-    remove_files $path_rtl/red_pitaya_top.sv
-    add_files $path_rtl/red_pitaya_top_4ADC.sv
-}
-add_files                         $path_bd
+#add_files                         $path_bd
 add_files                         $path_tbn
 add_files                         $path_tbn_top
-add_files -fileset sim_1 -norecurse $binfiles
+
+#add_files -fileset sim_1 -norecurse $binfiles
+
+set ip_files [glob  -nocomplain $path_ip/**/*.xci]
+if {$ip_files != ""} {
+add_files                         $ip_files
+}
+
+if {[file isdirectory $path_ip_top/asg_dat_fifo]} {
+source ${path_ip_top}/asg_dat_fifo/asg_dat_fifo.tcl
+}
+
+if {[file isdirectory $path_ip_top/sync_fifo]} {
+source ${path_ip_top}/sync_fifo/sync_fifo.tcl
+}
+
+if {[file isdirectory $path_tbn_top/axi_prot_check]} {
+add_files $path_tbn_top/axi_prot_check/axi_prot_check.xci
+}
+
 
 upgrade_ip [get_ips]
 
@@ -233,7 +230,7 @@ upgrade_ip [get_ips]
 #}
 
 # set vhdl default to VHDL2008
-set_property FILE_TYPE {VHDL 2008} [get_files *.vhd]
+#set_property FILE_TYPE {VHDL 2008} [get_files *.vhd]
 
 # add_files -fileset constrs_1      $path_sdc/red_pitaya.xdc
 # if {($def_model == "Z20_G2")} {

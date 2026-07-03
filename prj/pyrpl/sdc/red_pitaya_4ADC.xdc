@@ -150,10 +150,10 @@ set_property PACKAGE_PIN J15 [get_ports pll_hi_o]
 set_property PACKAGE_PIN K14 [get_ports pll_lo_o]
 
 ### SATA connector
-# set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_p_o[*]}]
-# set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_o[*]}]
-# set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_p_i[*]}]
-# set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_i[*]}]
+set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_p_o[*]}]
+set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_o[*]}]
+set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_p_i[*]}]
+set_property IOSTANDARD DIFF_HSTL_I_18 [get_ports {daisy_n_i[*]}]
 
 set_property PACKAGE_PIN T12 [get_ports {daisy_p_o[0]}]
 set_property PACKAGE_PIN U12 [get_ports {daisy_n_o[0]}]

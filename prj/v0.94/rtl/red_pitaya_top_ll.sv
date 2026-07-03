@@ -8,9 +8,9 @@
 /**
  * GENERAL DESCRIPTION:
  *
- * Top module connects PS part with rest of Red Pitaya applications.  
+ * Top module connects PS part with rest of Red Pitaya applications.
  *
- *                   /-------\      
+ *                   /-------\
  *   PS DDR <------> |  PS   |      AXI <-> custom bus
  *   PS MIO <------> |   /   | <------------+
  *   PS CLK -------> |  ARM  |              |
@@ -27,14 +27,14 @@
  *            \--------/   ^   \-----/      |
  *                         |                |
  *                         |  /-------\     |
- *                         -- |  ASG  | <---+ 
+ *                         -- |  ASG  | <---+
  *                            \-------/     |
  *                                          |
  *             /--------\                   |
  *    RX ----> |        |                   |
  *   SATA      | DAISY  | <-----------------+
- *    TX <---- |        | 
- *             \--------/ 
+ *    TX <---- |        |
+ *             \--------/
  *               |    |
  *               |    |
  *               (FREE)
@@ -49,14 +49,19 @@
  * send and received is at the moment undefined. This is left for the user.
  */
 
+/*
+* 080825 ALUI
+* scope is driven with adc clock, retrieved from serial signal adc366x
+*/
+
+
 module red_pitaya_top_ll #(
   // identification
   bit [0:5*32-1] GITH = '0,
   // module numbers
   int unsigned MNA = 2,  // number of acquisition modules
   int unsigned MNG = 2,  // number of generator   modules
-  parameter    DWE = 8,
-  parameter ADC_DW=14
+  parameter    DWE=11
 )(
   // PS connections
   inout  logic [54-1:0] FIXED_IO_mio     ,
@@ -107,17 +112,21 @@ module red_pitaya_top_ll #(
   input  logic [ 5-1:0] vinp_i     ,  // voltages p
   input  logic [ 5-1:0] vinn_i     ,  // voltages n
   // Expansion connector
-  inout  logic [ 8-1:0] exp_p_io   ,
-  inout  logic [ 8-1:0] exp_n_io   ,
+  inout  logic [ DWE-1:0] exp_p_io   ,
+  inout  logic [ DWE-1:0] exp_n_io   ,
   // SATA connector
   output logic [ 2-1:0] daisy_p_o  ,  // line 1 is clock capable
   output logic [ 2-1:0] daisy_n_o  ,
   input  logic [ 2-1:0] daisy_p_i  ,  // line 1 is clock capable
   input  logic [ 2-1:0] daisy_n_i  ,
+  output logic          out_sync_o,
   // PLL
   output logic          clk_sel_o  ,  // 1-internal 0-external
   output logic          pll_hi_o   ,
   output logic          pll_lo_o   ,
+  // I2C1 signal
+  inout logic           i2c1_scl_io,
+  inout logic           i2c1_sda_io,
   // LED
   output logic [ 8-1:0] led_o
 );
@@ -141,7 +150,6 @@ logic          trig_output_sel;
 logic          trig_asg_out;
 logic [ 4-1:0] trig_ext_asg01;
 
-logic [ 3-1:0] bitslip;
 
 
 // PLL signals
@@ -168,6 +176,8 @@ logic                 pwm_rstn;
 
 // ADC clock/reset
 logic                 adc_clk;
+logic                 par_clk;
+logic                 par_clk_bf;
 logic                 adc_rstn;
 logic                 adc_clk_daisy;
 logic                 scope_trigo;
@@ -177,11 +187,12 @@ logic                 CAN0_rx, CAN0_tx;
 logic                 CAN1_rx, CAN1_tx;
 logic                 can_on;
 logic [26-1:0]        ser_ddly;
-logic [ 5-1:0]        ser_inv;// = 5'h8;
+logic [ 5-1:0]        ser_inv;
+logic [ 3-1:0]        bitslip;
 
 
 // stream bus type
-localparam type SBA_T = logic signed [14-1:0];  // acquire
+localparam type SBA_T = logic signed [16-1:0];  // acquire
 localparam type SBG_T = logic signed [14-1:0];  // generate
 
 SBA_T [MNA-1:0]          adc_dat;
@@ -191,6 +202,8 @@ logic                    adc_dv;
 logic                    dac_clk_1x;
 logic                    dac_clk_1p;
 logic                    dac_rst;
+logic                    dac_axi_clk;
+logic                    dac_axi_rstn;
 
 logic        [14-1:0] dac_dat_a, dac_dat_b;
 logic        [14-1:0] dac_a    , dac_b    ;
@@ -210,6 +223,22 @@ logic                    hk_spi_clk ;
 logic                    hk_spi_i   ;
 logic                    hk_spi_o   ;
 logic                    hk_spi_t   ;
+
+// added to gen clock enabel
+assign out_sync_o = 1'b1;
+
+////////////////////////////////////////////////////////////////////////////////
+// I2C1
+////////////////////////////////////////////////////////////////////////////////
+logic           i2c1_scl_i;
+logic           i2c1_scl_o;
+logic           i2c1_scl_t;
+logic           i2c1_sda_i;
+logic           i2c1_sda_o;
+logic           i2c1_sda_t;
+
+IOBUF i_i2c1_scl (.O(i2c1_scl_i), .IO(i2c1_scl_io), .I(i2c1_scl_o), .T(i2c1_scl_t) );
+IOBUF i_i2c1_sda (.O(i2c1_sda_i), .IO(i2c1_sda_io), .I(i2c1_sda_o), .T(i2c1_sda_t) );
 
 // system bus
 sys_bus_if   ps_sys      (.clk (fclk[0]), .rstn (frstn[0]));
@@ -247,7 +276,7 @@ red_pitaya_pll_ll pll (
 BUFG bufg_adc_clk    (.O (adc_clk   ), .I (pll_adc_clk   ));
 BUFG bufg_dac_clk_1x (.O (dac_clk_1x), .I (pll_dac_clk_1x));
 BUFG bufg_dac_clk_1p (.O (dac_clk_1p), .I (pll_dac_clk_1p));
-BUFG bufg_dac_axi_clk (.O (dac_axi_clk), .I (pll_ser_clk));
+BUFG bufg_dac_axi_clk (.O (dac_axi_clk), .I (pll_adc_clk));
 BUFG bufg_ser_clk    (.O (ser_clk   ), .I (pll_ser_clk   ));
 BUFG bufg_pwm_clk    (.O (pwm_clk   ), .I (pll_pwm_clk   ));
 
@@ -262,7 +291,7 @@ always @(posedge adc_clk) begin
   if ((pll_locked && !pll_locked_r) || rst_cnt > 0) begin // some clk cycles after rising edge of pll_locked
     if (rst_cnt < RST_MAX)
       rst_cnt <= rst_cnt + 1;
-    else 
+    else
       rst_cnt <= 'h0;
   end else begin
     if (~pll_locked) begin
@@ -274,11 +303,19 @@ end
 assign rst_after_locked = |rst_cnt;
 // ADC reset (active low)
 always @(posedge adc_clk)
-adc_rstn     <=  frstn[0] & ~rst_after_locked;// & idly_rdy; 
+adc_rstn     <=  frstn[0] & ~rst_after_locked;
+
+// DAC reset (active high)
+always @(posedge dac_clk_1x)
+dac_rst      <= ~frstn[0] |  rst_after_locked;
+
+// DAC AXI reset (active low)
+always @(posedge dac_axi_clk)
+dac_axi_rstn <=  frstn[0] & ~rst_after_locked;
 
 // PWM reset (active low)
 always @(posedge pwm_clk)
-pwm_rstn     <=  frstn[0] & ~rst_after_locked;// & idly_rdy;
+pwm_rstn     <=  frstn[0] & ~rst_after_locked;
 
 
 
@@ -295,7 +332,10 @@ assign pll_lo_o  = 1'b1;
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
-red_pitaya_ps ps (
+wire scope_irq;
+wire [1:0] scope_irq_ch;
+
+red_pitaya_ps_ll ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
   .FIXED_IO_ps_porb   (  FIXED_IO_ps_porb            ),
@@ -324,6 +364,9 @@ red_pitaya_ps ps (
   // ADC analog inputs
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
+  .scope_irq_i   (scope_irq   ),
+  .scope_irq_ch1_i(scope_irq_ch[0]),
+  .scope_irq_ch2_i(scope_irq_ch[1]),
   // CAN0
   .CAN0_rx       (CAN0_rx     ),
   .CAN0_tx       (CAN0_tx     ),
@@ -334,8 +377,14 @@ red_pitaya_ps ps (
   .gpio          (gpio),
   // system read/write channel
   .bus           (ps_sys      ),
+  // I2C1
+  .i2c1_scl_i    (i2c1_scl_i),
+  .i2c1_scl_o    (i2c1_scl_o),
+  .i2c1_scl_t    (i2c1_scl_t),
+  .i2c1_sda_i    (i2c1_sda_i),
+  .i2c1_sda_o    (i2c1_sda_o),
+  .i2c1_sda_t    (i2c1_sda_t),
   // AXI masters
-
   .axi0_sys      (axi0_sys    ),
   .axi1_sys      (axi1_sys    ),
   .axi2_sys      (axi2_sys    ),
@@ -362,7 +411,7 @@ for (genvar i=6; i<8; i++) begin: for_sys
 end: for_sys
 endgenerate
 
-//assign par_dat = 16'h0;
+assign par_dat = 16'h0;
 
 assign daisy_trig = |par_dat;
 assign trig_ext   = gpio.i[GDW] & ~(daisy_mode[0] & daisy_trig);
@@ -404,6 +453,13 @@ red_pitaya_pdm pdm (
 );
 
 ////////////////////////////////////////////////////////////////////////////////
+// Daisy dummy code
+////////////////////////////////////////////////////////////////////////////////
+
+//assign daisy_p_o = 2'bzz;
+//assign daisy_n_o = 2'bzz;
+
+////////////////////////////////////////////////////////////////////////////////
 // ADC IO
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -416,31 +472,34 @@ logic                  adc_dat_rdv   ;
 
 
 // generating clock for ADC
-//ODDR #(.DDR_CLK_EDGE ("SAME_EDGE")) ODDR_dclk (.Q(adc_dclk_out), .C(pll_adc_dclk), .R(!frstn[0]), .D1(1'b1), .D2(1'b0), .CE(1'b1), .S(1'b0)); // lanes inverted!!
+ODDR #(.DDR_CLK_EDGE ("SAME_EDGE")) ODDR_dclk (.Q(adc_dclk_out), .C(pll_adc_dclk), .R(!frstn[0]), .D1(1'b1), .D2(1'b0), .CE(1'b1), .S(1'b0));
 
 assign adc_dat_p_in = {adc_datb_i[1][1], adc_datb_i[0][1], adc_data_i[1][1], adc_data_i[0][1], adc_fclk_i[1]} ;
 assign adc_dat_n_in = {adc_datb_i[1][0], adc_datb_i[0][0], adc_data_i[1][0], adc_data_i[0][0], adc_fclk_i[0]} ;
 
-OBUFDS  i_OBUFDS_adc_dco       (.I (pll_adc_dclk ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
+OBUFDS  i_OBUFDS_adc_dco       (.I (adc_dclk_out ), .O  (adc_dclk_o[1]), .OB (adc_dclk_o[0]));
 IBUFGDS i_IBUFGDS_adc_dco      (.I (adc_dclk_i[1]), .IB (adc_dclk_i[0]), .O  (adc_dclk_in)  );
 IBUFDS  i_IBUFDS_adc_dat [4:0] (.I (adc_dat_p_in),  .IB (adc_dat_n_in),  .O  (adc_ser)      );
 
 //(* IODELAY_GROUP = adc_inputs *) // Specifies group name for associated IDELAYs/ODELAYs and IDELAYCTRL
 IDELAYCTRL i_idelayctrl (.RDY(idly_rdy), .REFCLK(fclk[3]), .RST(!frstn[3]) );
 
+//reg       adc_en;
+//reg [7:0] adc_en_cnt;
 
+//always @(posedge fclk[0]) begin
+  //if (!frstn[0])
+    //adc_en_cnt <= 8'h0;
+  //else if (!adc_en_cnt[7])
+    //adc_en_cnt <= adc_en_cnt + 8'h1;
 
-reg       adc_en;
-reg [7:0] adc_en_cnt;
+  //adc_en <= adc_en_cnt[7];
+//end
 
-always @(posedge fclk[0]) begin
-  if (!frstn[0] || !fpll_locked_r3)
-    adc_en_cnt <= 8'h0;
-  else if (!adc_en_cnt[7])
-    adc_en_cnt <= adc_en_cnt + 8'h1;
-
-  adc_en <= adc_en_cnt[7];
-end
+//assign adc_clk = pll_dac_clk_1x ;
+//
+//---------------------------------------------------------------------------------
+//
 
 
 adc366x_top i_adc366x
@@ -452,15 +511,17 @@ adc366x_top i_adc366x
 
    // configuration
   .cfg_clk_i       (  fclk[0]        ),  //!< Configuration clock
-  .cfg_en_i        (  adc_en         ),  //!< global module enable
+  .cfg_en_i        (  adc_rstn         ),  //!< global module enable
   .cfg_dly_i       (  ser_ddly       ),  //!< delay control
   .cfg_bslip_o     (  bitslip        ),
 
    // parallel ports
   .adc_clk_i       (  adc_clk        ),  //!< parallel clock
   .adc_dat_o       (  adc_dat_raw    ),  //!< parallel data
-  .adc_dv_o        (  adc_dat_rdv    )   //!< parallel valid
+  .adc_dv_o        (  adc_dat_rdv    ),  //!< parallel valid
+  .par_clk_o       (  par_clk        )
 );
+
 
 
 // ADC SPI
@@ -474,16 +535,16 @@ assign adc_pdn_o   = 1'b0 ;   // ADC power down
 
 
 // optional digital loop
-assign adc_dat[0] = digital_loop[0] ? dac_a : adc_dat_raw[0][16-1 -: 14];
-assign adc_dat[1] = digital_loop[0] ? dac_b : adc_dat_raw[1][16-1 -: 14];
-assign adc_dv     = digital_loop[0] ? 1'b1  : adc_dat_rdv;
+assign adc_dat[0] = digital_loop[0] ? (dac_a<<<2) : adc_dat_raw[0];
+assign adc_dat[1] = digital_loop[0] ? (dac_b<<<2) : adc_dat_raw[1];
+assign adc_dv     = digital_loop[0] ?       1'b1  : adc_dat_rdv;
 
 
 ////////////////////////////////////////////////////////////////////////////////
 // DAC IO
 ////////////////////////////////////////////////////////////////////////////////
 
-// Sumation of ASG and PID signal perform saturation before sending to DAC 
+// Sumation of ASG and PID signal perform saturation before sending to DAC
 assign dac_a_sum = asg_dat[0] + pid_dat[0];
 assign dac_b_sum = asg_dat[1] + pid_dat[1];
 
@@ -497,9 +558,8 @@ begin
   dac_dat_a <= {dac_a[14-1], ~dac_a[14-2:0]};
   dac_dat_b <= {dac_b[14-1], ~dac_b[14-2:0]};
  // Loopback is for demonstration only. We avoid constraining for timing optimizations.
- // Channels inverted in HW
-  dac_data_o <= digital_loop[1] ? {adc_dat_raw[1][16-1], ~adc_dat_raw[1][15-1 -: 13]} : dac_dat_b ;
-  dac_datb_o <= digital_loop[1] ? {adc_dat_raw[0][16-1], ~adc_dat_raw[0][15-1 -: 13]} : dac_dat_a ;
+  dac_data_o <= digital_loop[1] ? adc_dat_raw[1][16-1 -: 14] : dac_dat_b ;
+  dac_datb_o <= digital_loop[1] ? adc_dat_raw[0][16-1 -: 14] : dac_dat_a ;
 end
 
 // DDR outputs
@@ -521,7 +581,9 @@ logic [DWE-1: 0] exp_p_alt,  exp_n_alt;
 logic [DWE-1: 0] exp_p_altr, exp_n_altr;
 logic [DWE-1: 0] exp_p_altd, exp_n_altd;
 
-red_pitaya_hk_ll i_hk (
+red_pitaya_hk_ll #(
+  .DWE             ( DWE ))
+i_hk (
   // system signals
   .clk_i           (adc_clk     ),  // clock
   .rstn_i          (adc_rstn    ),  // reset - active low
@@ -550,7 +612,7 @@ red_pitaya_hk_ll i_hk (
   .ser_ddly_o      (ser_ddly[25-1:0]),
   .new_ddly_o      (ser_ddly[26-1]),
   .ser_inv_o       (ser_inv     ),
-  .cfg_bslip_i     (  bitslip        ),
+  .cfg_bslip_i     (bitslip        ),
 
    // System bus
   .sys_addr        (sys[0].addr ),
@@ -569,6 +631,7 @@ red_pitaya_hk_ll i_hk (
 ////////////////////////////////////////////////////////////////////////////////
 // GPIO
 ////////////////////////////////////////////////////////////////////////////////
+//assign daisy_mode=3'h0;
 
 assign trig_output_sel = daisy_mode[2] ? trig_asg_out : scope_trigo;
 
@@ -605,29 +668,50 @@ assign CAN1_rx = can_on & exp_p_in[6];
 // oscilloscope
 ////////////////////////////////////////////////////////////////////////////////
 
+wire [ 4-1:0] trig_ch_0_1;
+wire [ 4-1:0] trig_ch_2_3 = 4'h0;
+wire [16-1:0] trg_state_ch_0_1;
+wire [16-1:0] trg_state_ch_2_3 = 16'h0;
+wire [16-1:0] adc_state_ch_0_1;
+wire [16-1:0] adc_state_ch_2_3 = 16'h0;
+wire [16-1:0] axi_state_ch_0_1;
+wire [16-1:0] axi_state_ch_2_3 = 16'h0;
 
-red_pitaya_scope #(
-   .ADC_DW(ADC_DW))
-i_scope (
+rp_scope_com #(
+  .CHN      (0),
+  .N_CH     (2),
+  .DW       (16),
+  .ADC_DW   (16),
+  .RSZ      (14))
+  i_scope (
   // ADC
-  .adc_a_i       (adc_dat[0]  ),  // CH 1
-  .adc_b_i       (adc_dat[1]  ),  // CH 2
-  .adc_clk_i     (adc_clk     ),  // clock
-  .adc_rstn_i    (adc_rstn    ),  // reset - active low
+  .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  .adc_clk_i     ({2{par_clk}}  ),  // clock
+  .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
   .trig_asg_i    (trig_asg_out),  // ASG trigger
+  .trig_ch_o     (trig_ch_0_1 ),  // output trigger to ADC for other 2 channels
+  .trig_ch_i     (trig_ch_2_3 ),  // input ADC trigger from other 2 channels
   .trig_ext_asg_o(trig_ext_asg01),
   .trig_ext_asg_i(trig_ext_asg01),
   .daisy_trig_o  (scope_trigo ),
+  .adc_state_o   (adc_state_ch_0_1),
+  .adc_state_i   (adc_state_ch_2_3),
+  .axi_state_o   (axi_state_ch_0_1),
+  .axi_state_i   (axi_state_ch_2_3),
+  .trg_state_o   (trg_state_ch_0_1),
+  .trg_state_i   (trg_state_ch_2_3),
+  .scope_irq_o   (scope_irq),
+  .scope_irq_ch_o(scope_irq_ch),
   // AXI0 master                 // AXI1 master
-  .axi0_waddr_o  (axi0_sys.waddr ),  .axi1_waddr_o  (axi1_sys.waddr ),
-  .axi0_wdata_o  (axi0_sys.wdata ),  .axi1_wdata_o  (axi1_sys.wdata ),
-  .axi0_wsel_o   (axi0_sys.wsel  ),  .axi1_wsel_o   (axi1_sys.wsel  ),
-  .axi0_wvalid_o (axi0_sys.wvalid),  .axi1_wvalid_o (axi1_sys.wvalid),
-  .axi0_wlen_o   (axi0_sys.wlen  ),  .axi1_wlen_o   (axi1_sys.wlen  ),
-  .axi0_wfixed_o (axi0_sys.wfixed),  .axi1_wfixed_o (axi1_sys.wfixed),
-  .axi0_werr_i   (axi0_sys.werr  ),  .axi1_werr_i   (axi1_sys.werr  ),
-  .axi0_wrdy_i   (axi0_sys.wrdy  ),  .axi1_wrdy_i   (axi1_sys.wrdy  ),
+  .axi_waddr_o  ({axi1_sys.waddr,  axi0_sys.waddr} ),
+  .axi_wdata_o  ({axi1_sys.wdata,  axi0_sys.wdata} ),
+  .axi_wsel_o   ({axi1_sys.wsel,   axi0_sys.wsel}  ),
+  .axi_wvalid_o ({axi1_sys.wvalid, axi0_sys.wvalid}),
+  .axi_wlen_o   ({axi1_sys.wlen,   axi0_sys.wlen}  ),
+  .axi_wfixed_o ({axi1_sys.wfixed, axi0_sys.wfixed}),
+  .axi_werr_i   ({axi1_sys.werr,   axi0_sys.werr}  ),
+  .axi_wrdy_i   ({axi1_sys.wrdy,   axi0_sys.wrdy}  ),
   // System bus
   .sys_addr      (sys[1].addr ),
   .sys_wdata     (sys[1].wdata),
@@ -637,6 +721,36 @@ i_scope (
   .sys_err       (sys[1].err  ),
   .sys_ack       (sys[1].ack  )
 );
+// old scope
+//red_pitaya_scope_Z20 i_scope (
+  //// ADC
+  //.adc_a_i       (adc_dat[0]  ),  // CH 1
+  //.adc_b_i       (adc_dat[1]  ),  // CH 2
+  //.adc_clk_i     (adc_clk     ),  // clock
+  //.adc_rstn_i    (adc_rstn    ),  // reset - active low
+  //.trig_ext_i    (trig_ext    ),  // external trigger
+  //.trig_asg_i    (trig_asg_out),  // ASG trigger
+  //.trig_ext_asg_o(trig_ext_asg01),
+  //.trig_ext_asg_i(trig_ext_asg01),
+  //.daisy_trig_o  (scope_trigo ),
+  //// AXI0 master                 // AXI1 master
+  //.axi0_waddr_o  (axi0_sys.waddr ),  .axi1_waddr_o  (axi1_sys.waddr ),
+  //.axi0_wdata_o  (axi0_sys.wdata ),  .axi1_wdata_o  (axi1_sys.wdata ),
+  //.axi0_wsel_o   (axi0_sys.wsel  ),  .axi1_wsel_o   (axi1_sys.wsel  ),
+  //.axi0_wvalid_o (axi0_sys.wvalid),  .axi1_wvalid_o (axi1_sys.wvalid),
+  //.axi0_wlen_o   (axi0_sys.wlen  ),  .axi1_wlen_o   (axi1_sys.wlen  ),
+  //.axi0_wfixed_o (axi0_sys.wfixed),  .axi1_wfixed_o (axi1_sys.wfixed),
+  //.axi0_werr_i   (axi0_sys.werr  ),  .axi1_werr_i   (axi1_sys.werr  ),
+  //.axi0_wrdy_i   (axi0_sys.wrdy  ),  .axi1_wrdy_i   (axi1_sys.wrdy  ),
+  //// System bus
+  //.sys_addr      (sys[1].addr ),
+  //.sys_wdata     (sys[1].wdata),
+  //.sys_wen       (sys[1].wen  ),
+  //.sys_ren       (sys[1].ren  ),
+  //.sys_rdata     (sys[1].rdata),
+  //.sys_err       (sys[1].err  ),
+  //.sys_ack       (sys[1].ack  )
+//);
 
 ////////////////////////////////////////////////////////////////////////////////
 //  DAC arbitrary signal generator
@@ -673,8 +787,8 @@ red_pitaya_pid i_pid (
    // signals
   .clk_i           (adc_clk   ),  // clock
   .rstn_i          (adc_rstn  ),  // reset - active low
-  .dat_a_i         (adc_dat[0]),  // in 1
-  .dat_b_i         (adc_dat[1]),  // in 2
+  .dat_a_i         (adc_dat[0][16-1 -: 14]),  // in 1
+  .dat_b_i         (adc_dat[1][16-1 -: 14]),  // in 2
   .dat_a_o         (pid_dat[0]),  // out 1
   .dat_b_o         (pid_dat[1]),  // out 2
   // System bus
@@ -690,15 +804,16 @@ red_pitaya_pid i_pid (
 ////////////////////////////////////////////////////////////////////////////////
 // Daisy test code
 ////////////////////////////////////////////////////////////////////////////////
-//assign daisy_p_o =2'bzz;
-//assign daisy_n_o =2'bzz;
 
 wire daisy_rx_rdy ;
 wire dly_clk = fclk[3]; // 200MHz clock from PS - used for IDELAY (optionaly)
 wire [16-1:0] par_dati = daisy_mode[0] ? {16{trig_output_sel}} : 16'h1234;
 wire          par_dvi  = daisy_mode[0] ? 1'b0 : daisy_rx_rdy;
 
-red_pitaya_daisy i_daisy (
+red_pitaya_daisy  #(
+  .IO_STD("LVDS_25"),
+  .N_DATS(1)
+) i_daisy (
    // SATA connector
   .daisy_p_o       (  daisy_p_o                  ),  // line 1 is clock capable
   .daisy_n_o       (  daisy_n_o                  ),
@@ -733,5 +848,54 @@ red_pitaya_daisy i_daisy (
   .sys_err_o       (  sys[5].err                 ),
   .sys_ack_o       (  sys[5].ack                 )
 );
+
+  `ifdef Z20_G2
+  // DIO11 is TX clock
+  // DIO12 is RX clock
+  // exp_e3x_o={DIO11, DIO13, DIO15, DIO17}
+  // exp_e3x_i={DIO12, DIO14, DIO16, DIO18}
+red_pitaya_daisy  #(
+  .IO_STD("LVDS_25"),
+  .N_DATS(3)
+) i_serlines_add
+(
+   // SATA connector
+  .daisy_p_o       (  exp_e3p_o                  ),  // line 3 is clock capable (SRCC)
+  .daisy_n_o       (  exp_e3n_o                  ),
+  .daisy_p_i       (  exp_e3p_i                  ),  // line 3 is clock capable (MRCC)
+  .daisy_n_i       (  exp_e3n_i                  ),
+   // Data
+  .ser_clk_i       (  ser_clk                    ),  // high speed serial
+  .dly_clk_i       (  dly_clk                    ),  // delay clock
+   // TX
+  .par_clk_i       (  adc_clk                    ),  // data paralel clock
+  .par_rstn_i      (  adc_rstn                   ),  // reset - active low
+  //.par_rdy_o       (  daisy_rx_rdy               ),
+  //.par_dv_i        (  par_dvi                    ),
+  //.par_dat_i       (  par_dati                   ),
+   // RX
+  //.par_clk_o       ( adc_clk_daisy               ),
+  //.par_rstn_o      (                             ),
+  //.par_dv_o        (                             ),
+  //.par_dat_o       ( par_dat                     ),
+
+  .sync_mode_i     (  1'b0                       ),
+  //.debug_o         (/*led_o*/                    ),
+   // System bus
+  .sys_clk_i       (  adc_clk                    ),  // clock
+  .sys_rstn_i      (  adc_rstn                   ),  // reset - active low
+  .sys_addr_i      (  sys[6].addr                ),
+  .sys_sel_i       (                             ),
+  .sys_wdata_i     (  sys[6].wdata               ),
+  .sys_wen_i       (  sys[6].wen                 ),
+  .sys_ren_i       (  sys[6].ren                 ),
+  .sys_rdata_o     (  sys[6].rdata               ),
+  .sys_err_o       (  sys[6].err                 ),
+  .sys_ack_o       (  sys[6].ack                 )
+);
+  `else
+  sys_bus_stub sys_bus_stub_6 (sys[6]);
+  `endif
+  sys_bus_stub sys_bus_stub_7 (sys[7]);
 
 endmodule: red_pitaya_top_ll

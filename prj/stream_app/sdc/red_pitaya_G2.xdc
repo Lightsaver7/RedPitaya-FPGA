@@ -63,3 +63,4 @@ set_false_path -from [get_clocks clk_125_system_clk_gen_0] -to [get_clocks {dais
 set_false_path -from [get_clocks clk_200_system_clk_gen_0] -to [get_clocks {daisy_clk clk_fpga_2}]
 set_false_path -from [get_clocks daisy_clk] -to [get_clocks {clk_125_system_clk_gen_0 clk_200_system_clk_gen_0 clk_fpga_2}]
 set_false_path -from [get_clocks clk_fpga_2] -to [get_clocks {clk_125_system_clk_gen_0 clk_200_system_clk_gen_0 daisy_clk}]
+

@@ -61,6 +61,11 @@ module red_pitaya_ps (
   // XADC
   input  logic  [ 5-1:0] vinp_i             ,  // voltages p
   input  logic  [ 5-1:0] vinn_i             ,  // voltages n
+  input  logic           scope_irq_i        ,
+  input  logic           scope_irq_ch1_i    ,
+  input  logic           scope_irq_ch2_i    ,
+  input  logic           scope_irq_ch3_i    ,
+  input  logic           scope_irq_ch4_i    ,
   // GPIO
   gpio_if.m              gpio,
   // system read/write channel
@@ -152,6 +157,7 @@ axi_master #(
   .sys_rdata_o    ( axi0_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi0_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi0_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi0_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi0_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi0_sys.rerr   )  // system read error
 );
@@ -227,6 +233,7 @@ axi_master #(
   .sys_rdata_o    ( axi1_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi1_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi1_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi1_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi1_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi1_sys.rerr   )  // system read error
 );
@@ -236,7 +243,8 @@ axi_master #(
   .AW    (  32    ), // address width
   .ID    (   3    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW    (   4    ), // master ID width
-  .LW    (   4    )  // length width
+  .LW    (   4    ), // length width
+  .RD_MAX_OUTSTANDING (   8    )
 ) axi_master_2 (
    // global signals
   .axi_clk_i      ( hp2_saxi.ACLK   ), // global clock
@@ -301,7 +309,8 @@ axi_master #(
   .sys_rfixed_i   ( axi2_sys.rfixed ), // system read burst type (fixed / incremental)
   .sys_rdata_o    ( axi2_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi2_sys.rrdym  ), // system read data is ready - master
-  .sys_rrdy_i     ( axi2_sys.rrdys  ), // system read data is ready -slave  
+  .sys_rrdy_i     ( axi2_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi2_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi2_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi2_sys.rerr   )  // system read error
 );
@@ -311,7 +320,8 @@ axi_master #(
   .AW    (  32    ), // address width
   .ID    (   4    ), // master ID // TODO, it is not OK to have two masters with same ID
   .IW    (   4    ), // master ID width
-  .LW    (   4    )  // length width
+  .LW    (   4    ), // length width
+  .RD_MAX_OUTSTANDING (   8    )
 ) axi_master_3 (
    // global signals
   .axi_clk_i      ( hp3_saxi.ACLK   ), // global clock
@@ -377,6 +387,7 @@ axi_master #(
   .sys_rdata_o    ( axi3_sys.rdata  ), // system read data
   .sys_rrdy_o     ( axi3_sys.rrdym  ), // system read data is ready - master
   .sys_rrdy_i     ( axi3_sys.rrdys  ), // system read data is ready -slave
+  .sys_rlast_o    ( axi3_sys.rlast  ), // system read last beat
   .sys_rardy_o    ( axi3_sys.rardy  ), // system read address is ready
   .sys_rerr_o     ( axi3_sys.rerr   )  // system read error
 );
@@ -466,6 +477,15 @@ system system_i
   .Vaux8_v_n (vinn_i[0]),  .Vaux8_v_p (vinp_i[0]),
   .Vaux9_v_n (vinn_i[3]),  .Vaux9_v_p (vinp_i[3]),
   .Vp_Vn_v_n (vinn_i[4]),  .Vp_Vn_v_p (vinp_i[4]),
+`ifdef SIMULATION
+  .IRQ_F2P           ({9'h0, scope_irq_ch4_i, scope_irq_ch3_i, scope_irq_ch2_i, scope_irq_ch1_i, scope_irq_i, 2'b0}),
+`else
+  .scope_irq         (scope_irq_i     ),
+  .scope_irq_ch1     (scope_irq_ch1_i ),
+  .scope_irq_ch2     (scope_irq_ch2_i ),
+  .scope_irq_ch3     (scope_irq_ch3_i ),
+  .scope_irq_ch4     (scope_irq_ch4_i ),
+`endif
   // GP0
   .M_AXI_GP0_ACLK    (axi_gp.ACLK   ),
 //  .M_AXI_GP0_ARESETn (axi_gp.ARESETn),

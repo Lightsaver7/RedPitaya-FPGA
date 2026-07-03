@@ -307,6 +307,9 @@ pwm_rstn     <=  frstn[0] & ~rst_after_locked;
 //  Connections to PS
 ////////////////////////////////////////////////////////////////////////////////
 
+wire scope_irq;
+wire [1:0] scope_irq_ch;
+
 red_pitaya_ps ps (
   .FIXED_IO_mio       (  FIXED_IO_mio                ),
   .FIXED_IO_ps_clk    (  FIXED_IO_ps_clk             ),
@@ -336,6 +339,11 @@ red_pitaya_ps ps (
   // ADC analog inputs
   .vinp_i        (vinp_i      ),
   .vinn_i        (vinn_i      ),
+  .scope_irq_i   (scope_irq   ),
+  .scope_irq_ch1_i(scope_irq_ch[0]),
+  .scope_irq_ch2_i(scope_irq_ch[1]),
+  .scope_irq_ch3_i(1'b0),
+  .scope_irq_ch4_i(1'b0),
   // CAN0
   .CAN0_rx       (CAN0_rx     ),
   .CAN0_tx       (CAN0_tx     ),
@@ -558,14 +566,21 @@ wire [16-1:0] adc_state_ch_2_3 = 16'h0;
 wire [16-1:0] axi_state_ch_0_1;
 wire [16-1:0] axi_state_ch_2_3 = 16'h0;
 
+localparam int unsigned SCOPE_DW = 16;
+logic signed [SCOPE_DW-1:0] adc_scope_dat [MNA-1:0];
+for (genvar i = 0; i < MNA; i++) begin : scope_adc_ext
+  assign adc_scope_dat[i] = $signed(adc_dat[i]);
+end
+
 rp_scope_com #(
   .CHN(0),
   .N_CH(2),
-  .DW(14),
-  .RSZ(14)) 
+  .DW(SCOPE_DW),
+  .ADC_DW(ADC_DW),
+  .RSZ(14))
   i_scope (
   // ADC
-  .adc_dat_i     ({adc_dat[1], adc_dat[0]}  ),
+  .adc_dat_i     ({adc_scope_dat[1], adc_scope_dat[0]}  ),
   .adc_clk_i     ({2{adc_clk}}  ),  // clock
   .adc_rstn_i    ({2{adc_rstn}} ),  // reset - active low
   .trig_ext_i    (trig_ext    ),  // external trigger
@@ -581,6 +596,8 @@ rp_scope_com #(
   .axi_state_i   (axi_state_ch_2_3),
   .trg_state_o   (trg_state_ch_0_1),
   .trg_state_i   (trg_state_ch_2_3),
+  .scope_irq_o   (scope_irq),
+  .scope_irq_ch_o(scope_irq_ch),
   // AXI0 master                 // AXI1 master
   .axi_waddr_o  ({axi1_sys.waddr,  axi0_sys.waddr} ),
   .axi_wdata_o  ({axi1_sys.wdata,  axi0_sys.wdata} ),
