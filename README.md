@@ -1,76 +1,108 @@
 # redpitaya-fpga
 
-This repository contains FPGA projects for the Red Pitaya platform, along with shared sources, constraints, build scripts, and supporting materials.
+This repository contains FPGA projects for the Red Pitaya platform.
 
-## Getting Started
+It includes:
 
-- Use Vivado `2025.1`.
-- Choose a project from `prj/` and the required `MODEL`; the `MODEL` value must match a `red_pitaya_vivado_<MODEL>.tcl` file.
-- Use `open_vivado.bat` or `open_vivado.sh` to open a project quickly.
-- Use the root `Makefile` with `PRJ` and `MODEL` for the standard build flow.
+- project-specific sources in `prj/`
+- shared RTL/IP/constraints used by multiple projects
+- scripts and Makefile-based build flows
 
-Examples:
+## Quick start (beginners)
+
+1. Install Vivado `2025.1`.
+2. Choose a project name from `prj/` (for example `v0.94`).
+3. Choose a target `MODEL` (for example `Z10` or `Z20_250`).
+4. Open the project with `open_vivado.bat` (Windows) or `open_vivado.sh` (Linux/Unix-like).
+5. Build with `make PRJ=<project> MODEL=<model>`.
+
+Examples (each line is a separate build command):
 
 ```bash
 ./open_vivado.sh v0.94 Z10
-```
-
-```bash
 make clean PRJ=v0.94
 make PRJ=v0.94 MODEL=Z10
 ```
 
-Build guides:
+Detailed platform guides:
 
 - Windows: [BUILD_WIN.md](/BUILD_WIN.md)
-- Linux: [BUILD_LNX.md](/BUILD_LNX.md)
+- Linux / Unix-like: [BUILD_LNX.md](/BUILD_LNX.md)
+
+## Key concepts
+
+`PRJ`
+
+- selects the project directory under `prj/`
+- must exactly match a folder name, for example `v0.94`, `stream_app`, `logic`, or `barebones`
+
+`MODEL`
+
+- selects the hardware variant
+- must match an available `red_pitaya_vivado_<MODEL>.tcl` script
+
+During project open/build, Vivado combines:
+
+- shared sources from the repository root
+- project-local files from `prj/<PRJ>/`
 
 ## Repository structure
 
-- `prj/` - project directory; each subdirectory defines a separate build configuration and its own project-specific overrides.
-- `rtl/` - shared RTL modules.
-- `ip/` - IP blocks and related sources.
-- `sdc/` - constraint files for target boards.
-- `dts/` - device-tree-related files.
-- `tbn/` - test environment and testbenches.
-- `doc/` - documentation.
+- `prj/` - project definitions and project-local overrides
+- `rtl/` - shared RTL modules
+- `ip/` - shared IP and helper sources
+- `sdc/` - shared constraints
+- `dts/` - shared device-tree-related files
+- `tbn/` - shared testbench environment
+- `doc/` - documentation
 
-### How projects are organized in `prj/`
+Typical subdirectories inside one project (`prj/<PRJ>/`) are:
 
-Projects in this repository are selected with `PRJ=<name>`. The `PRJ` value must match a directory name inside `prj/`, for example `v0.94`, `stream_app`, `logic`, or `barebones`.
+- `rtl` - project RTL modules
+- `ip` - block design Tcl and project IP/PS configuration
+- `sdc` - project-specific constraints
+- `dts` and variants such as `dts_250`, `dts_4ch` - project device-tree data
+- `tbn` - project testbenches
+- `out`, `build`, `sdk`, `.Xil`, `sim` - generated artifacts
 
-The `MODEL` parameter selects the hardware build variant. It determines which `red_pitaya_vivado_<MODEL>.tcl` script is used for project opening and synthesis.
+## Open and build commands
 
-For synthesis and project opening, Vivado combines shared RTL, constraints, and shared IP helper sources from the repository root with project-local files from `prj/<PRJ>/`.
+Open project in Vivado:
 
-Typical project subdirectories are:
+```bash
+./open_vivado.sh v0.94 Z20_250
+```
 
-- `prj/<PRJ>/rtl` - project RTL modules.
-- `prj/<PRJ>/ip` - block-design Tcl descriptions and IP/PS configuration for that project.
-- `prj/<PRJ>/sdc` - project-specific constraints layered on top of the shared ones.
-- `prj/<PRJ>/dts` and variants such as `dts_250`, `dts_4ch` - project device-tree data.
-- `prj/<PRJ>/tbn` - project testbenches.
-- `prj/<PRJ>/out`, `build`, `sdk`, `.Xil`, `sim` - common generated directories for project artifacts.
+or on Windows:
 
-Reusable blocks are kept in the root `rtl/`, `ip/`, and `sdc/` directories and are connected from multiple projects.
+```bat
+open_vivado.bat v0.94 Z20_250
+```
+
+Build commands (each line is a separate build command):
+
+```bash
+make project PRJ=v0.94 MODEL=Z20_250
+make PRJ=v0.94 MODEL=Z20_250
+make dts PRJ=v0.94 MODEL=Z20_250
+make clean PRJ=v0.94
+```
 
 ## Working with projects
 
-In this codebase, a project is represented by a `prj/<PRJ>` directory.
-
 When creating a new project:
 
-- create a new directory under `prj/`; its name becomes the `PRJ` value;
-- use `prj/barebones` as the starting point for a new project;
-- keep project-local sources and configuration files inside the project directory;
-- `rtl/`, `ip/`, and `dts/` are usually required;
-- add `sdc/` when the project needs its own constraints;
-- add `tbn/` when the project needs its own tests.
+- create a new folder under `prj/`; that folder name becomes `PRJ`
+- use `prj/barebones` as a starting template
+- keep project-local files in that project folder
+- normally include `rtl`, `ip`, and `dts`
+- add `sdc` if custom constraints are needed
+- add `tbn` if project-specific tests are needed
 
-The `prj/<PRJ>/ip` directory is usually created either by exporting Tcl from Vivado for an already configured project or by copying a template such as `prj/barebones/ip` and adapting it for the new project.
+The `prj/<PRJ>/ip` directory is usually created by exporting Tcl from Vivado or by copying/adapting a template such as `prj/barebones/ip`.
 
 When modifying an existing project:
 
-- keep project-specific changes in `prj/<PRJ>/rtl`, `prj/<PRJ>/ip`, `prj/<PRJ>/sdc`, `prj/<PRJ>/dts`, and related project files;
-- treat shared modules carefully, because the same code may be used by multiple projects and board variants;
-- reopen or rebuild the project with the same `PRJ` and `MODEL` to validate the changes.
+- keep project-specific edits inside `prj/<PRJ>/...`
+- treat root shared modules (`rtl/`, `ip/`, `sdc/`) carefully because multiple projects may depend on them
+- reopen or rebuild with the same `PRJ` and `MODEL` to verify changes
