@@ -1,39 +1,64 @@
 # Windows build
 
-This repository can be used on Windows to open Vivado projects and run builds.
+This guide explains the easiest way to use this repository on Windows.
 
-## Requirements
+You can do two main things:
 
-### Open a project in Vivado from `cmd.exe`
+- open a project in Vivado
+- run `make`-based build flows from a Unix-like shell
 
-- Xilinx Vivado for Windows
+## 1. Requirements
 
-### Run `make`-based build flows on Windows
+### For opening a project in Vivado from `cmd.exe`
 
-- Xilinx Vivado for Windows
+- Xilinx Vivado for Windows (`2025.1`)
+
+### For running `make`-based builds
+
+- Xilinx Vivado for Windows (`2025.1`)
+- Xilinx Vitis for Windows (`2025.1`) for `xsct`
 - `make`
 - `gcc`
 - `dtc`
-- `xsct`
 - a Unix-like shell such as `Git Bash`, `MSYS2`, or `WSL`
 
-The additional tools are needed because the `Makefile` uses Unix shell utilities and will not run correctly from plain `cmd.exe` alone.
+The `Makefile` uses Unix shell utilities, so it will not run correctly from plain `cmd.exe` alone.
 
-## Vivado setup
+## 2. Windows PATH setup (recommended)
 
-It is recommended to set the following environment variable:
-
-```bat
-set XILINX_VIVADO=C:\Xilinx\Vivado\2025.1
-```
-
-The [open_vivado.bat](/open_vivado.bat) script first looks for `vivado.bat` at `%XILINX_VIVADO%\bin\vivado.bat`, then falls back to:
+Add these folders to your Windows `Path` environment variable:
 
 ```text
-C:\Xilinx\Vivado\2025.1\bin\vivado.bat
+C:\Xilinx\Vivado\2025.1\bin
+C:\Xilinx\Vitis\2025.1\bin
 ```
 
-## Supported models
+After updating `Path`, close and reopen your terminal.
+
+Verify tools are visible:
+
+```bat
+where vivado
+where xsct
+```
+
+If you plan to use `make`, also verify in your Unix-like shell:
+
+```bash
+which make
+which gcc
+which dtc
+which xsct
+```
+
+Important:
+
+- install and verify tools in the same shell you plan to use for building
+- if a tool is installed in one environment but you build in another, it may not be found
+
+`open_vivado.bat` can still use `XILINX_VIVADO` if set, but using `Path` is the preferred setup for beginners.
+
+## 3. Supported models
 
 - `Z10`
 - `Z20`
@@ -43,7 +68,7 @@ C:\Xilinx\Vivado\2025.1\bin\vivado.bat
 - `Z20_G2`
 - `Z20_ll`
 
-## Open a project in Vivado
+## 4. Open a project in Vivado
 
 From `cmd.exe` in the repository root:
 
@@ -51,20 +76,25 @@ From `cmd.exe` in the repository root:
 open_vivado.bat v0.94 Z20_250
 ```
 
-Examples:
+More examples:
 
 ```bat
 open_vivado.bat v0.94 Z20
 open_vivado.bat stream_app Z20_250
 ```
 
-What the script does:
+What `open_vivado.bat` checks:
 
-- checks that `prj\<PROJECT>` exists
-- validates `MODEL`
-- locates `vivado.bat` (via `XILINX_VIVADO` or fallback path)
-- checks that `red_pitaya_vivado_<MODEL>.tcl` exists
-- runs Vivado directly with `-source red_pitaya_vivado_<MODEL>.tcl -tclargs <PROJECT> DEV_MODE`
+- `prj\<PROJECT>` exists
+- `MODEL` is valid
+- Vivado launcher exists
+- `red_pitaya_vivado_<MODEL>.tcl` exists
+
+Then it runs:
+
+```text
+vivado -source red_pitaya_vivado_<MODEL>.tcl -tclargs <PROJECT> DEV_MODE
+```
 
 Help:
 
@@ -72,42 +102,48 @@ Help:
 open_vivado.bat --help
 ```
 
-## Build from a shell on Windows
+## 5. Build from a shell on Windows
 
-If you use `Git Bash`, `MSYS2`, or `WSL`, you can run the `Makefile` directly.
+Use `Git Bash`, `MSYS2`, or `WSL`, then run commands from the repository root.
 
-Open the project in the GUI:
+WSL warning:
+
+- WSL is a separate Linux environment
+- do not assume Windows `Path` or Windows-installed tools are automatically available in WSL
+- if you build in WSL, install and verify required tools inside WSL
+
+Open the project in Vivado GUI:
 
 ```bash
 make project PRJ=v0.94 MODEL=Z20_250
 ```
 
-Build the bitstream:
+Build bitstream:
 
 ```bash
 make PRJ=v0.94 MODEL=Z20_250
 ```
 
-Build only the device tree:
+Build only device tree:
 
 ```bash
 make dts PRJ=v0.94 MODEL=Z20_250
 ```
 
-Clean project artifacts:
+Clean generated project files:
 
 ```bash
 make clean PRJ=v0.94
 ```
 
-## Useful Make variables
+## 6. Useful `make` variables
 
-- `PRJ` - project name from the `prj/` directory
+- `PRJ` - project name from `prj/`
 - `MODEL` - target board model
 - `HWID` - optional hardware ID
 - `DEFINES` - additional Verilog defines
-- `DTS_VER` - device-tree flow version, default is `2025.1`
-- `VIVADO_OPTS` - additional Vivado arguments
+- `DTS_VER` - device-tree flow version (default `2025.1`)
+- `VIVADO_OPTS` - extra Vivado arguments
 
 Example:
 
@@ -115,28 +151,32 @@ Example:
 make project PRJ=stream_app MODEL=Z20_250 DEFINES="FEATURE_X=1"
 ```
 
-## Common issues
+## 7. Common issues
 
-`Vivado was not found` (when using `open_vivado.bat`)
+`'vivado' is not recognized` or `Vivado was not found`
 
-- set `XILINX_VIVADO`
-- check that `vivado.bat` exists in `%XILINX_VIVADO%\bin`
+- confirm `C:\Xilinx\Vivado\2025.1\bin` is in Windows `Path`
+- run `where vivado` in a new terminal
 
-`make: *** No rule to make target 'project'` (when using `make` directly)
+`'xsct' is not recognized`
 
-- ensure you are running from a Unix-like shell (`Git Bash`, `MSYS2`, `WSL`)
-- check that the `Makefile` exists in the repository root
-- verify that `make` is installed and available in `PATH`
+- confirm `C:\Xilinx\Vitis\2025.1\bin` is in Windows `Path`
+- run `where xsct` in a new terminal
+
+`make: command not found` or `No rule to make target 'project'`
+
+- run from `Git Bash`, `MSYS2`, or `WSL` instead of plain `cmd.exe`
+- run from the repository root where `Makefile` is located
+- verify `make` is installed and available in `PATH`
 
 `project "prj\<name>" not found`
 
-- check the project directory name in `prj/`
+- check that the project directory exists in `prj/`
 
 `invalid model`
 
-- use only the supported models listed above
+- use one of the supported model names listed above
 
-`make`, `gcc`, `dtc`, or shell utility errors
+`gcc`, `dtc`, or `xsct` errors during `make`
 
-- run the build from `Git Bash`, `MSYS2`, or `WSL`
-- make sure `make`, `gcc`, `dtc`, and `xsct` are available in `PATH`
+- make sure each tool is installed and available in shell `PATH`
